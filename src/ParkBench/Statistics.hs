@@ -2,10 +2,8 @@
 -- https://github.com/Bodigrim/tasty-bench
 module ParkBench.Statistics
   ( benchmark,
-    benchmark2,
     Pull (..),
     insertPull,
-    benchmark3,
     Estimate (..),
     goodness,
     Sample (..),
@@ -19,7 +17,6 @@ import Data.Function (fix)
 import Data.IORef
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NonEmpty
-import ParkBench.Clock (Seconds, cpuPrecision, oneMillisecond)
 import ParkBench.Prelude
 
 -- | A value that took a certan time to compute.
@@ -45,11 +42,6 @@ data Estimate a = Estimate
   }
   deriving stock (Functor, Show)
 
--- | Is this estimate accurate enough?
-accurate :: Double -> Estimate a -> Bool
-accurate threshold (Estimate (Timed m _) s) =
-  s < (threshold * realToFrac m)
-
 -- | A measure of goodness of the estimate, from 0 to 1.
 goodness :: Estimate a -> Double
 goodness (Estimate (Timed m _) s) =
@@ -59,20 +51,12 @@ estimate :: Sample a => Timed a -> Timed a -> Estimate a
 estimate (Timed t0 x0) (Timed t1 x1) =
   Estimate
     { mean = Timed m (combine2 x0 x1),
-      stdev =
-        max
-          (std (t0 - jitter) m (t1 + jitter))
-          (std (t0 + jitter) m (t1 - jitter))
+      stdev = std t0 m t1
     }
   where
     m :: Rational
     m =
       fit t0 t1
-
-    jitter :: Seconds
-    jitter =
-      -- FIXME shouldn't this be a function of `m`, rather than just 1ms?
-      max cpuPrecision oneMillisecond
 
     std :: Rational -> Rational -> Rational -> Double
     std x y z =
@@ -104,31 +88,6 @@ class Sample a where
   -- | Combine two samples, where the second is of twice as many iterations as the first.
   combine2 :: a -> a -> a
 
-benchmark :: forall a. (Sample a, Scaled a) => (Word64 -> IO (Timed a)) -> IO (Estimate a)
-benchmark run = do
-  t1 <- run 1
-  go 1 t1
-  where
-    go :: Word64 -> Timed a -> IO (Estimate a)
-    go n t1 = do
-      t2 <- run (2 * n)
-      let e = estimate t1 t2
-      if accurate 0.05 e
-        then pure (downscale n e)
-        else go (2 * n) t2
-
--- | Benchmark forever, calling the provided callback with better and better estimates.
-benchmark2 :: forall a void. (Sample a, Scaled a) => (Word64 -> IO (Timed a)) -> (Estimate a -> IO ()) -> IO void
-benchmark2 run callback = do
-  t1 <- run 1
-  go 1 t1
-  where
-    go :: Word64 -> Timed a -> IO void
-    go n t1 = do
-      t2 <- run (2 * n)
-      callback (downscale n (estimate t1 t2))
-      go (2 * n) t2
-
 data Pull a
   = Pull !Double (IO (Pull a))
 
@@ -145,12 +104,13 @@ insertPull' p0@(Pull n _) = \case
       then p0 : p1 : ps
       else p1 : insertPull' p0 ps
 
-benchmark3 :: forall a. (Sample a, Scaled a) => (Word64 -> IO (Timed a)) -> IO (IO (Estimate a), Pull a)
-benchmark3 run = do
+-- | Benchmark forever, calling the provided callback with better and better estimates.
+benchmark :: forall a. (Sample a, Scaled a) => (Word64 -> IO (Timed a)) -> IO (IO (Estimate a), Pull a)
+benchmark run = do
   t1 <- run 1
   t2 <- run 2
   let e = estimate t1 t2
-  ref <- newIORef (downscale 1 e)
+  ref <- newIORef e
   pure (readIORef ref, Pull (goodness e) (go (writeIORef ref) 2 t2))
   where
     go :: (Estimate a -> IO ()) -> Word64 -> Timed a -> IO (Pull a)

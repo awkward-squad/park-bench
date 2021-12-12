@@ -1,8 +1,6 @@
 module ParkBench
   ( Benchmark,
     benchmark,
-    benchmark2,
-    benchmark3,
     function,
     action,
   )
@@ -24,26 +22,11 @@ benchmark xs =
     Nothing -> pure ()
     Just ys -> benchmark' (coerce ys)
 
-benchmark' :: NonEmpty (String, Word64 -> IO (Statistics.Timed InProcess.Summary)) -> IO ()
+benchmark' :: NonEmpty (String, Word64 -> IO (Statistics.Timed InProcess.Summary)) -> IO void
 benchmark' xs = do
-  summaries <- (traverse . _2) Statistics.benchmark xs
-  putStrLn (renderTable (InProcess.summariesToTable summaries))
-
-benchmark2 :: Benchmark -> IO void
-benchmark2 (Benchmark (name, f)) =
-  Statistics.benchmark2 f \summary -> do
-    putStrLn ("\ESC[2J" ++ renderTable (InProcess.summariesToTable ((name, summary) :| [])))
-
-benchmark3 :: [Benchmark] -> IO ()
-benchmark3 xs =
-  case NonEmpty.nonEmpty xs of
-    Nothing -> pure ()
-    Just ys -> benchmark3' (coerce ys)
-
-benchmark3' :: NonEmpty (String, Word64 -> IO (Statistics.Timed InProcess.Summary)) -> IO void
-benchmark3' xs = do
-  summaries0 <- (traverse . _2) Statistics.benchmark3 xs
-  let loop (Statistics.Pull _ p0 :| ps) = do
+  summaries0 <- (traverse . _2) Statistics.benchmark xs
+  let loop :: NonEmpty (Statistics.Pull InProcess.Summary) -> IO void
+      loop (Statistics.Pull _ p0 :| ps) = do
         summaries <- traverse (\(x, (y, _)) -> (x,) <$> y) summaries0
         putStrLn ("\ESC[2J" ++ renderTable (InProcess.summariesToTable summaries))
         p1 <- p0

@@ -77,13 +77,10 @@ common component
 
 library
   import: component
-  build-depends:
-    clock
   exposed-modules:
     ParkBench
   hs-source-dirs: src
   other-modules:
-    ParkBench.Clock
     ParkBench.InProcess
     ParkBench.Numeric
     ParkBench.Prelude
