@@ -2,8 +2,8 @@
 -- https://github.com/Bodigrim/tasty-bench
 module ParkBench.Statistics
   ( benchmark,
-    Pull (..),
-    insertPull,
+    Pull,
+    pull,
     Estimate (..),
     goodness,
     Sample (..),
@@ -13,7 +13,6 @@ module ParkBench.Statistics
   )
 where
 
-import Data.Function (fix)
 import Data.IORef
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NonEmpty
@@ -91,7 +90,12 @@ class Sample a where
 data Pull a
   = Pull !Double (IO (Pull a))
 
--- | Insert a pull into a list of pulls in decreasing goodness order.
+pull :: NonEmpty (Pull a) -> IO (NonEmpty (Pull a))
+pull (Pull _ p0 :| ps) = do
+  p1 <- p0
+  pure (insertPull p1 ps)
+
+-- Insert a pull into a list of pulls in decreasing goodness order.
 insertPull :: Pull a -> [Pull a] -> NonEmpty (Pull a)
 insertPull p ps =
   NonEmpty.fromList (insertPull' p ps)
@@ -104,22 +108,20 @@ insertPull' p0@(Pull n _) = \case
       then p0 : p1 : ps
       else p1 : insertPull' p0 ps
 
--- | Benchmark forever, calling the provided callback with better and better estimates.
+-- | Benchmark forever, providing better and better estimates.
 benchmark :: forall a. (Sample a, Scaled a) => (Word64 -> IO (Timed a)) -> IO (IO (Estimate a), Pull a)
 benchmark run = do
-  t1 <- run 1
-  t2 <- run 2
-  let e = estimate t1 t2
-  ref <- newIORef e
-  pure (readIORef ref, Pull (goodness e) (go (writeIORef ref) 2 t2))
-  where
-    go :: (Estimate a -> IO ()) -> Word64 -> Timed a -> IO (Pull a)
-    go record =
-      fix \loop n t1 -> do
+  t <- run 1
+  ref <- newIORef (Estimate t 0)
+
+  let another :: Word64 -> Timed a -> IO (Pull a)
+      another n t1 = do
         t2 <- run (2 * n)
         let e = estimate t1 t2
-        record (downscale n e)
-        pure (Pull (goodness e) (loop (2 * n) t2))
+        writeIORef ref (downscale n e)
+        pure (Pull (goodness e) (another (2 * n) t2))
+
+  pure (readIORef ref, Pull 1 (another 1 t))
 
 fit :: Rational -> Rational -> Rational
 fit x1 x2 =

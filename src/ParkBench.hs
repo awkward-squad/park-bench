@@ -25,13 +25,22 @@ benchmark xs =
 benchmark' :: NonEmpty (String, Word64 -> IO (Statistics.Timed InProcess.Summary)) -> IO void
 benchmark' xs = do
   summaries0 <- (traverse . _2) Statistics.benchmark xs
-  let loop :: NonEmpty (Statistics.Pull InProcess.Summary) -> IO void
-      loop (Statistics.Pull _ p0 :| ps) = do
-        summaries <- traverse (\(x, (y, _)) -> (x,) <$> y) summaries0
+  let pulls :: NonEmpty (Statistics.Pull InProcess.Summary)
+      pulls =
+        (\(_, (_, x)) -> x) <$> summaries0
+  let getSummaries :: IO (NonEmpty (String, Statistics.Estimate InProcess.Summary))
+      getSummaries =
+        traverse (\(x, (y, _)) -> (x,) <$> y) summaries0
+  let renderSummaries :: IO ()
+      renderSummaries = do
+        summaries <- getSummaries
         putStrLn ("\ESC[2J" ++ renderTable (InProcess.summariesToTable summaries))
-        p1 <- p0
-        loop (Statistics.insertPull p1 ps)
-  loop ((\(_, (_, x)) -> x) <$> summaries0)
+  let loop :: NonEmpty (Statistics.Pull InProcess.Summary) -> IO void
+      loop ps0 = do
+        renderSummaries
+        ps1 <- Statistics.pull ps0
+        loop ps1
+  loop pulls
 
 function :: String -> (a -> b) -> a -> Benchmark
 function name f x =
