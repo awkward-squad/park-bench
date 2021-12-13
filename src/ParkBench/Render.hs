@@ -6,6 +6,7 @@ where
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Text as Text
+import qualified ParkBench.Builder as Builder
 import ParkBench.Named (Named)
 import qualified ParkBench.Named as Named
 import ParkBench.Prelude
@@ -25,7 +26,14 @@ estimatesToHeader (NonEmpty.toList -> names) =
     go = \case
       [] -> []
       x : xs ->
-        "" : (Text.map dash (Named.name x) <> "─(n=" <> Text.pack (show (samples (Named.thing x))) <> ")") : go xs
+        "" :
+        Builder.build
+          ( Builder.t (Text.map dash (Named.name x))
+              <> "─(n="
+              <> Builder.decimal (samples (Named.thing x))
+              <> Builder.c ')'
+          ) :
+        go xs
 
     dash :: Char -> Char
     dash = \case

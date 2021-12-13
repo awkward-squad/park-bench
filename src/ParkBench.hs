@@ -7,11 +7,12 @@ module ParkBench
 where
 
 import Control.Concurrent (threadDelay)
+import qualified Data.ByteString as ByteString
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NonEmpty
-import qualified Data.Text.Lazy.Builder as Builder
-import qualified Data.Text.Lazy.IO as LazyText
+import qualified Data.Text.Encoding as Text
 import qualified ParkBench.Benchmark as Benchmark
+import qualified ParkBench.Builder as Builder
 import ParkBench.Named (Named (Named))
 import qualified ParkBench.Named as Named
 import ParkBench.Prelude
@@ -46,7 +47,8 @@ benchmark' xs = do
   let renderSummaries :: IO ()
       renderSummaries = do
         summaries <- getSummaries
-        LazyText.putStrLn (Builder.toLazyText ("\ESC[2J" <> renderTable (estimatesToTable summaries)))
+        ByteString.putStr
+          (Text.encodeUtf8 (Builder.build ("\ESC[2J" <> renderTable (estimatesToTable summaries) <> Builder.c '\n')))
   let loop :: NonEmpty (Statistics.Pull RtsStats) -> IO void
       loop ps0 = do
         renderSummaries
