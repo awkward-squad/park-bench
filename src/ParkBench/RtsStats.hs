@@ -22,6 +22,7 @@ data RtsStats = RtsStats
   { allocated_bytes :: {-# UNPACK #-} !Rational,
     copied_bytes :: {-# UNPACK #-} !Rational,
     cpu_ns :: {-# UNPACK #-} !Rational,
+    -- requires major gc
     cumulative_live_bytes :: {-# UNPACK #-} !Rational,
     cumulative_par_balanced_copied_bytes :: {-# UNPACK #-} !Rational,
     elapsed_ns :: {-# UNPACK #-} !Rational,
@@ -29,10 +30,14 @@ data RtsStats = RtsStats
     gc_elapsed_ns :: {-# UNPACK #-} !Rational,
     gcs :: {-# UNPACK #-} !Rational,
     major_gcs :: {-# UNPACK #-} !Rational,
+    -- requires major gc
     max_compact_bytes :: {-# UNPACK #-} !Rational,
+    -- requires major gc
     max_large_objects_bytes :: {-# UNPACK #-} !Rational,
+    -- requires major gc
     max_live_bytes :: {-# UNPACK #-} !Rational,
     max_mem_in_use_bytes :: {-# UNPACK #-} !Rational,
+    -- requires major gc
     max_slop_bytes :: {-# UNPACK #-} !Rational,
     mutator_cpu_ns :: {-# UNPACK #-} !Rational,
     mutator_elapsed_ns :: {-# UNPACK #-} !Rational,
@@ -75,6 +80,7 @@ allocated_bytes_per_second :: RtsStats -> Rational
 allocated_bytes_per_second s =
   allocated_bytes s `divide` (elapsed_ns s / 1_000_000_000)
 
+-- requires major gc
 average_live_data :: RtsStats -> Rational
 average_live_data s =
   cumulative_live_bytes s `divide` major_gcs s
@@ -91,6 +97,7 @@ gc_wall_percent :: RtsStats -> Rational
 gc_wall_percent s =
   gc_elapsed_ns s `divide` elapsed_ns s
 
+-- requires major gc
 max_normal_objects_bytes :: RtsStats -> Rational
 max_normal_objects_bytes s =
   max_live_bytes s - max_compact_bytes s - max_large_objects_bytes s
