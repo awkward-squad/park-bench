@@ -83,6 +83,7 @@ library
   hs-source-dirs: src
   other-modules:
     ParkBench.Benchmark
+    ParkBench.Named
     ParkBench.Numeric
     ParkBench.Prelude
     ParkBench.Pretty

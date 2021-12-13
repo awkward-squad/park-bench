@@ -34,8 +34,8 @@ instance Semigroup a => Semigroup (Timed a) where
 
 data Estimate a = Estimate
   { kvariance :: {-# UNPACK #-} !Rational,
-    mean :: !(Timed a),
-    samples :: {-# UNPACK #-} !Natural
+    mean :: {-# UNPACK #-} !(Timed a),
+    samples :: !Natural
   }
   deriving stock (Functor, Show)
 
