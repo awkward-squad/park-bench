@@ -29,9 +29,8 @@ estimatesToHeader (NonEmpty.toList -> names) =
         "" :
         Builder.build
           ( Builder.t (Text.map dash (Named.name x))
-              <> "─(n="
+              <> "⧸"
               <> Builder.decimal (samples (Named.thing x))
-              <> Builder.c ')'
           ) :
         go xs
 

@@ -77,8 +77,8 @@ class Roll a where
 
 data Pull a
   = Pull
-      -- kvariance of latest estimate
-      {-# UNPACK #-} !Rational
+      -- latest estimate
+      !(Estimate a)
       (IO (Pull a))
 
 pull :: NonEmpty (Pull a) -> IO (NonEmpty (Pull a))
@@ -86,16 +86,17 @@ pull (Pull _ p0 :| ps) = do
   p1 <- p0
   pure (insertPull p1 ps)
 
--- Insert a pull into a list of pulls in decreasing goodness order.
+-- Insert a pull into an ordered list of pulls, maintaining the invariant that the pull most in need of being run next
+-- is first in the list.
 insertPull :: Pull a -> [Pull a] -> NonEmpty (Pull a)
 insertPull p ps =
   NonEmpty.fromList (insertPull' p ps)
 
 insertPull' :: Pull a -> [Pull a] -> [Pull a]
-insertPull' p0@(Pull n _) = \case
+insertPull' p0@(Pull e0 _) = \case
   [] -> [p0]
-  p1@(Pull m _) : ps ->
-    if n <= m
+  p1@(Pull e1 _) : ps ->
+    if kvariance e0 > kvariance e1
       then p0 : p1 : ps
       else p1 : insertPull' p0 ps
 
@@ -111,11 +112,11 @@ benchmark run = do
         t2 <- run n
         let !e1 = updateEstimate n t2 e0
         writeIORef ref e1
-        pure (Pull (kvariance e0) (another e1))
+        pure (Pull e1 (another e1))
         where
           n = next e0
 
-  pure (readIORef ref, Pull 0 (another e))
+  pure (readIORef ref, Pull e (another e))
   where
     -- target runs that take 0.1 seconds (e.g. 500_000_000 would be 0.5 seconds)
     next :: Estimate a -> Word64

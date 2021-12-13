@@ -96,7 +96,11 @@ newtype NumberCell'
   deriving (Cellular) via NumberCell
 
 data EstSecondsCell
-  = EstSecondsCell Rational Double
+  = EstSecondsCell
+      -- mean
+      {-# UNPACK #-} !Rational
+      -- standard deviation
+      {-# UNPACK #-} !Double
 
 instance Eq EstSecondsCell where
   EstSecondsCell x _ == EstSecondsCell y _ = x == y
@@ -203,7 +207,7 @@ data Table
   = Table ![Text] ![RowGroup]
 
 data RowGroup
-  = RowGroup {-# UNPACK #-} !Text [Row]
+  = RowGroup {-# UNPACK #-} !Text ![Row]
 
 data Row
   = -- | Invariant: 1+ cells; not all cells are empty
