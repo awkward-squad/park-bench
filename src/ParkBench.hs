@@ -6,6 +6,7 @@ module ParkBench
   )
 where
 
+import Control.Concurrent (threadDelay)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified ParkBench.Benchmark as Benchmark
@@ -17,16 +18,18 @@ import ParkBench.Render (estimatesToTable)
 import ParkBench.RtsStats (RtsStats)
 import qualified ParkBench.Statistics as Statistics
 
+-- | A benchmark.
 newtype Benchmark
   = Benchmark (Named (Word64 -> IO (Statistics.Timed RtsStats)))
 
+-- | Run a collection of benchmarks.
 benchmark ::
   -- |
   [Benchmark] ->
-  IO ()
+  IO void
 benchmark xs =
   case NonEmpty.nonEmpty xs of
-    Nothing -> pure ()
+    Nothing -> forever (threadDelay maxBound)
     Just ys -> benchmark' (coerce ys)
 
 benchmark' :: NonEmpty (Named (Word64 -> IO (Statistics.Timed RtsStats))) -> IO void
