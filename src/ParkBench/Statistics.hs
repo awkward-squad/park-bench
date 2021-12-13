@@ -49,7 +49,7 @@ variance (Estimate kvariance _ samples) =
     then 0
     else kvariance / w2r (samples - 1)
 
--- | @updateEstimate v@ creates an estimate per thing-that-took-time @v@ that was a run of 1 iteration.
+-- | @initialEstimate v@ creates an estimate per thing-that-took-time @v@ that was a run of 1 iteration.
 initialEstimate :: Timed a -> Estimate a
 initialEstimate mean =
   Estimate
@@ -100,7 +100,6 @@ insertPull' p0@(Pull t0 _) = \case
       then p0 : p1 : ps
       else p1 : insertPull' p0 ps
 
--- | Benchmark forever, providing better and better estimates.
 benchmark :: forall a. Roll a => (Word64 -> IO (Timed a)) -> IO (IO (Estimate a), Pull a)
 benchmark run = do
   t <- run 1
