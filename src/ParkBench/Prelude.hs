@@ -1,5 +1,5 @@
 module ParkBench.Prelude
-  ( Seconds,
+  ( Nanoseconds,
     longzip,
     read,
     module X,
@@ -19,7 +19,7 @@ import GHC.Generics as X (Generic)
 import Text.Read (readMaybe)
 import Prelude as X hiding (read)
 
-type Seconds = Rational
+type Nanoseconds = Rational
 
 longzip :: (a -> a -> a) -> [a] -> [a] -> [a]
 longzip _ [] ys = ys

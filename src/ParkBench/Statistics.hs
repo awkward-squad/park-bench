@@ -17,7 +17,7 @@ import ParkBench.Prelude
 
 -- | A value that took a certan time to compute.
 data Timed a = Timed
-  { time :: !Seconds,
+  { time :: !Nanoseconds,
     value :: !a
   }
   deriving stock (Functor, Show)
@@ -32,7 +32,7 @@ instance Semigroup a => Semigroup (Timed a) where
 
 data Estimate a = Estimate
   { kvariance :: {-# UNPACK #-} !Rational,
-    mean :: {-# UNPACK #-} !Seconds,
+    mean :: {-# UNPACK #-} !Nanoseconds,
     samples :: {-# UNPACK #-} !Natural,
     value :: !a
   }
@@ -102,25 +102,34 @@ insertPull' p0@(Pull n _) = \case
 -- | Benchmark forever, providing better and better estimates.
 benchmark :: forall a. Roll a => (Word64 -> IO (Timed a)) -> IO (IO (Estimate a), Pull a)
 benchmark run = do
-  ref <- do
-    t <- run 1
-    newIORef (initialEstimate t)
+  t <- run 1
+  let e = initialEstimate t
+  ref <- newIORef e
 
-  let another :: Word64 -> IO (Pull a)
-      another n = do
-        t2 <- run (2 * n)
-        a0 <- readIORef ref
-        let !a1 = updateEstimate (2 * n) t2 a0
-        writeIORef ref a1
-        pure (Pull (kvariance a0) (another (2 * n)))
+  let another :: Estimate a -> IO (Pull a)
+      another e0 = do
+        t2 <- run n
+        let !e1 = updateEstimate n t2 e0
+        writeIORef ref e1
+        pure (Pull (kvariance e0) (another e1))
+        where
+          n = next e0
 
-  pure (readIORef ref, Pull 0 (another 1))
+  pure (readIORef ref, Pull 0 (another e))
+  where
+    -- target runs that take 0.1 seconds (e.g. 500_000_000 would be 0.5 seconds)
+    next :: Estimate a -> Word64
+    next Estimate {mean, samples} =
+      max 1 (min (n2w samples) (floor (100_000_000 / mean)))
+
+n2r :: Natural -> Rational
+n2r = fromIntegral
+
+n2w :: Natural -> Word64
+n2w = fromIntegral
 
 w2n :: Word64 -> Natural
 w2n = fromIntegral
 
 w2r :: Word64 -> Rational
 w2r = fromIntegral
-
-n2r :: Natural -> Rational
-n2r = fromIntegral
