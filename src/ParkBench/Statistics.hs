@@ -78,7 +78,7 @@ class Roll a where
 data Pull a
   = Pull
       -- kvariance of latest estimate
-      !Rational
+      {-# UNPACK #-} !Rational
       (IO (Pull a))
 
 pull :: NonEmpty (Pull a) -> IO (NonEmpty (Pull a))
@@ -119,8 +119,8 @@ benchmark run = do
   where
     -- target runs that take 0.1 seconds (e.g. 500_000_000 would be 0.5 seconds)
     next :: Estimate a -> Word64
-    next Estimate {mean = Timed mean _, samples} =
-      max 1 (min (n2w samples) (floor (100_000_000 / mean)))
+    next Estimate {mean = Timed nanoseconds _, samples} =
+      max 1 (min (n2w samples) (floor (100_000_000 / nanoseconds)))
 
 n2r :: Natural -> Rational
 n2r = fromIntegral
