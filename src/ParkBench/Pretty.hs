@@ -31,8 +31,12 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe
 import Data.Ord (Down (..))
 import Data.Ratio (approxRational)
-import Data.String (IsString (..))
+import qualified Data.Text as Text
+import qualified Data.Text.Lazy as LazyText
+import Data.Text.Lazy.Builder (Builder)
+import qualified Data.Text.Lazy.Builder as Builder
 import ParkBench.Numeric (divide)
+import Data.String (IsString(..))
 import ParkBench.Prelude
 import Text.Printf (printf)
 
@@ -42,7 +46,8 @@ import Text.Printf (printf)
 data R a b
   = R Cell (a -> Maybe b)
 
-class (Ord a, Show a) => Cellular a where
+class Ord a => Cellular a where
+  cellString :: a -> Builder
   cellValue :: a -> Rational
 
 newtype BytesCell
@@ -51,17 +56,15 @@ newtype BytesCell
   deriving (Ord) via Down Rational
 
 instance Cellular BytesCell where
+  cellString (BytesCell r) = prettyBytes r
   cellValue = coerce
 
-instance Show BytesCell where
-  show (BytesCell r) = prettyBytes r
-
-prettyBytes :: Rational -> String
+prettyBytes :: Rational -> Builder
 prettyBytes n0
-  | n1 <- n0 / 1_000_000_000, n1 >= 1 = prettyNumber n1 ++ " gb"
-  | n1 <- n0 / 1_000_000, n1 >= 1 = prettyNumber n1 ++ " mb"
-  | n1 <- n0 / 1_000, n1 >= 1 = prettyNumber n1 ++ " kb"
-  | n0 >= 0.5 = prettyNumber n0 ++ " b"
+  | n1 <- n0 / 1_000_000_000, n1 >= 1 = prettyNumber n1 <> " gb"
+  | n1 <- n0 / 1_000_000, n1 >= 1 = prettyNumber n1 <> " mb"
+  | n1 <- n0 / 1_000, n1 >= 1 = prettyNumber n1 <> " kb"
+  | n0 >= 0.5 = prettyNumber n0 <> " b"
   | otherwise = ""
 
 newtype BytesPerSecondCell
@@ -70,16 +73,16 @@ newtype BytesPerSecondCell
   deriving (Ord) via Down Rational
 
 instance Cellular BytesPerSecondCell where
+  cellString (BytesPerSecondCell r) = prettyBytesPerSecond r
   cellValue = coerce
 
-instance Show BytesPerSecondCell where
-  show (BytesPerSecondCell r) = prettyBytesPerSecond r
-
-prettyBytesPerSecond :: Rational -> String
+prettyBytesPerSecond :: Rational -> Builder
 prettyBytesPerSecond r =
-  case prettyBytes r of
-    "" -> ""
-    s -> s ++ "/s"
+  if LazyText.null (Builder.toLazyText s)
+    then ""
+    else s <> "/s"
+  where
+    s = prettyBytes r
 
 newtype NumberCell
   = NumberCell Rational
@@ -87,15 +90,13 @@ newtype NumberCell
   deriving (Ord) via Down Rational
 
 instance Cellular NumberCell where
+  cellString (NumberCell r) = prettyNumber r
   cellValue = coerce
-
-instance Show NumberCell where
-  show (NumberCell r) = prettyNumber r
 
 newtype NumberCell'
   = NumberCell' Rational
   deriving (Eq, Ord) via Rational
-  deriving (Cellular, Show) via NumberCell
+  deriving (Cellular) via NumberCell
 
 data EstSecondsCell
   = EstSecondsCell Rational Double
@@ -107,16 +108,16 @@ instance Ord EstSecondsCell where
   compare (EstSecondsCell x _) (EstSecondsCell y _) = compare y x
 
 instance Cellular EstSecondsCell where
+  cellString (EstSecondsCell x y) = prettyEstSeconds x y
   cellValue (EstSecondsCell x _) = x
 
-instance Show EstSecondsCell where
-  show (EstSecondsCell x y) = prettyEstSeconds x y
-
-prettyEstSeconds :: Rational -> Double -> String
+prettyEstSeconds :: Rational -> Double -> Builder
 prettyEstSeconds n m =
-  case prettySeconds (approxRational m (1 / 1_000_000_000)) of
-    "" -> prettySeconds n
-    m' -> prettySeconds n ++ " ± " ++ m'
+  if LazyText.null (Builder.toLazyText m')
+    then prettySeconds n
+    else prettySeconds n <> " ± " <> m'
+  where
+    m' = prettySeconds (approxRational m (1 / 1_000_000_000))
 
 newtype PercentageCell
   = PercentageCell Rational
@@ -124,21 +125,21 @@ newtype PercentageCell
   deriving (Ord) via Down Rational
 
 instance Cellular PercentageCell where
+  cellString (PercentageCell r) = prettyPercentage r
   cellValue = coerce
 
-instance Show PercentageCell where
-  show (PercentageCell r) = prettyPercentage r
-
-prettyPercentage :: Rational -> String
+prettyPercentage :: Rational -> Builder
 prettyPercentage n =
-  case prettyNumber (n * 100) of
-    "" -> ""
-    s -> s ++ "%"
+  if LazyText.null (Builder.toLazyText s)
+    then ""
+    else s <> "%"
+  where
+    s = prettyNumber (n * 100)
 
 newtype PercentageCell'
   = PercentageCell' Rational
   deriving (Eq, Ord) via Rational
-  deriving (Cellular, Show) via PercentageCell
+  deriving (Cellular) via PercentageCell
 
 newtype SecondsCell
   = SecondsCell Rational
@@ -146,31 +147,32 @@ newtype SecondsCell
   deriving (Ord) via Down Rational
 
 instance Cellular SecondsCell where
+  cellString (SecondsCell r) = prettySeconds r
   cellValue = coerce
 
-instance Show SecondsCell where
-  show (SecondsCell r) = prettySeconds r
-
-prettySeconds :: Rational -> String
+prettySeconds :: Rational -> Builder
 prettySeconds n0
-  | n0 >= 1 = prettyNumber n0 ++ " s"
-  | n1 <- n0 * 1_000, n1 >= 1 = prettyNumber n1 ++ " ms"
-  | n1 <- n0 * 1_000_000, n1 >= 1 = prettyNumber n1 ++ " µs"
+  | n0 >= 1 = prettyNumber n0 <> " s"
+  | n1 <- n0 * 1_000, n1 >= 1 = prettyNumber n1 <> " ms"
+  | n1 <- n0 * 1_000_000, n1 >= 1 = prettyNumber n1 <> " µs"
   | otherwise =
-    case prettyNumber (n0 * 1_000_000_000) of
-      "" -> ""
-      s -> s ++ " ns"
+    if LazyText.null (Builder.toLazyText s)
+      then ""
+      else s <> " ns"
+  where
+    s = prettyNumber (n0 * 1_000_000_000)
 
 -- | Print a number with three significant digits.
-prettyNumber :: Rational -> String
+prettyNumber :: Rational -> Builder
 prettyNumber n
-  | na >= 100 = printf "%.0f" nd
-  | na >= 10 = printf "%.1f" nd
-  | na >= 1 = printf "%.2f" nd
+  | na >= 100 = Builder.fromString (printf "%.0f" nd)
+  | na >= 10 = Builder.fromString (printf "%.1f" nd)
+  | na >= 1 = Builder.fromString (printf "%.2f" nd)
   | otherwise =
     case printf "%.3f" nd of
       "0.000" -> ""
-      s -> s
+      "-0.000" -> ""
+      s -> Builder.fromString s
   where
     na = abs n
     nd = realToFrac n :: Double
@@ -179,12 +181,12 @@ prettyNumber n
 maketh :: forall a. NonEmpty a -> (forall b. Cellular b => R a b -> Row)
 maketh (summary0 :| summaries0) (R name (f :: a -> Maybe b)) =
   if all isEmptyCell cols
-    then Empty
+    then EmptyRow
     else Row (name : cols)
   where
     cols :: [Cell]
     cols =
-      white (maybe "" show (f summary0)) : makeCols (f summary0) summaries0
+      maybe EmptyCell (white . build . cellString) (f summary0) : makeCols (f summary0) summaries0
     -- TODO make this cleaner
     makeCols :: Maybe b -> [a] -> [Cell]
     makeCols s0 = \case
@@ -197,92 +199,117 @@ maketh (summary0 :| summaries0) (R name (f :: a -> Maybe b)) =
               _ -> []
       s1 : ss ->
         case (s0, f s1) of
-          (Nothing, Just v1) -> "" : white (show v1) : makeCols (Just v1) ss
-          (Just v0, Just v1) -> delta v0 v1 : white (show v1) : makeCols (Just v1) ss
-          (_, Nothing) -> "" : "" : makeCols Nothing ss
+          (Nothing, Just v1) -> EmptyCell : white (build (cellString v1)) : makeCols (Just v1) ss
+          (Just v0, Just v1) -> delta v0 v1 : white (build (cellString v1)) : makeCols (Just v1) ss
+          (_, Nothing) -> EmptyCell : EmptyCell : makeCols Nothing ss
     delta :: b -> b -> Cell
     delta v1 v2 =
-      if null (show v1) || null (show v2)
-        then ""
+      if LazyText.null (Builder.toLazyText (cellString v1)) || LazyText.null (Builder.toLazyText (cellString v2))
+        then EmptyCell
         else colorize (prettyPercentage ((cellValue v2 - cellValue v1) `divide` cellValue v1))
       where
-        colorize :: String -> Cell
+        colorize :: Builder -> Cell
         colorize =
-          case compare v1 v2 of
-            LT -> green
-            EQ -> white
-            GT -> red
+          ( case compare v1 v2 of
+              LT -> green
+              EQ -> white
+              GT -> red
+          )
+            . build
 
 data Table
-  = Table [String] [RowGroup]
+  = Table ![Text] ![RowGroup]
 
 data RowGroup
-  = RowGroup String [Row]
+  = RowGroup {-# UNPACK #-} !Text [Row]
 
 data Row
   = -- | Invariant: 1+ cells; not all cells are empty
-    Row [Cell]
-  | Empty
+    Row ![Cell]
+  | EmptyRow
 
 data Cell
-  = Cell Color String
+  = Cell !Color {-# UNPACK #-} !Text
+  | EmptyCell
+
+cellWidth :: Cell -> Int
+cellWidth = \case
+  Cell _ s -> Text.length s
+  EmptyCell -> 0
 
 instance IsString Cell where
   fromString =
-    white
+    white . Text.pack
 
 data Color
   = White
   | Red
   | Green
 
-green :: String -> Cell
+green :: Text -> Cell
 green = Cell Green
 
-red :: String -> Cell
+red :: Text -> Cell
 red = Cell Red
 
-white :: String -> Cell
+white :: Text -> Cell
 white = Cell White
 
 isEmptyCell :: Cell -> Bool
-isEmptyCell (Cell _ s) =
-  null s
+isEmptyCell = \case
+  -- don't yet have invariant that s is non-null
+  Cell _ s -> Text.null s
+  EmptyCell -> True
 
-renderTable :: Table -> String
+renderTable :: Table -> Builder
 renderTable (Table labels rowGroups) =
-  List.intercalate "\n" (header : mapMaybe renderRowGroup rowGroups ++ [footer])
+  (header : mapMaybe renderRowGroup rowGroups ++ [footer]) `sepBy` Builder.singleton '\n'
   where
-    header :: String
+    header :: Builder
     header =
-      let middle = List.intercalate "┬" (map (\(s, n) -> s ++ replicate (n + 2 - length s) '─') (zip labels widths))
-       in '┌' : middle ++ "┐"
-    line :: String -> String
+      let middle =
+            ( map
+                ( \(s, n) ->
+                    Builder.fromText s
+                      <> mconcat (replicate (n + 2 - Text.length s) (Builder.singleton '─'))
+                )
+                (zip labels widths)
+            )
+              `sepBy` Builder.singleton '┬'
+       in Builder.singleton '┌' <> middle <> Builder.singleton '┐'
+    line :: Text -> Builder
     line label =
-      let label' = "\ESC[1m\ESC[4m\ESC[97m" ++ label ++ "\ESC[39m\ESC[24m\ESC[22m"
-          segment = label' ++ replicate (head widths + 2 - length label) '─'
-          segments = concatMap (\n -> '┼' : replicate (n + 2) '─') (tail widths)
-       in '├' : segment ++ segments ++ "┤"
-    footer :: String
+      let label' = "\ESC[1m\ESC[4m\ESC[97m" <> Builder.fromText label <> "\ESC[39m\ESC[24m\ESC[22m"
+          segment = label' <> mconcat (replicate (head widths + 2 - Text.length label) (Builder.singleton '─'))
+          segments =
+            foldMap
+              (\n -> Builder.singleton '┼' <> mconcat (replicate (n + 2) (Builder.singleton '─')))
+              (tail widths)
+       in Builder.singleton '├' <> segment <> segments <> Builder.singleton '┤'
+    footer :: Builder
     footer =
-      '└' : List.intercalate "┴" (map (\n -> replicate (n + 2) '─') widths) ++ "┘"
-    renderRowGroup :: RowGroup -> Maybe String
+      Builder.singleton '└'
+        <> mconcat (List.intersperse "┴" (map (\n -> mconcat (replicate (n + 2) (Builder.singleton '─'))) widths))
+        <> "┘"
+    renderRowGroup :: RowGroup -> Maybe Builder
     renderRowGroup (RowGroup label rows) =
       case mapMaybe renderRow rows of
         [] -> Nothing
-        s -> Just (List.intercalate "\n" (line label : s))
-    renderRow :: Row -> Maybe String
+        s -> Just ((line label : s) `sepBy` "\n")
+    renderRow :: Row -> Maybe Builder
     renderRow = \case
-      Row row -> Just ("│ " ++ List.intercalate " │ " (map renderCell (zip widths row)) ++ " │")
-      Empty -> Nothing
-    renderCell :: (Int, Cell) -> String
-    renderCell (n, Cell color s) =
-      case color of
-        White -> s'
-        Green -> "\ESC[32m" ++ s' ++ "\ESC[39m"
-        Red -> "\ESC[31m" ++ s' ++ "\ESC[39m"
-      where
-        s' = replicate (n - length s) ' ' ++ s
+      Row row -> Just ("│ " <> mconcat (List.intersperse " │ " (map renderCell (zip widths row))) <> " │")
+      EmptyRow -> Nothing
+    renderCell :: (Int, Cell) -> Builder
+    renderCell = \case
+      (n, EmptyCell) -> Builder.fromText (Text.replicate n " ")
+      (n, Cell color s) ->
+        case color of
+          White -> s'
+          Green -> "\ESC[32m" <> s' <> "\ESC[39m"
+          Red -> "\ESC[31m" <> s' <> "\ESC[39m"
+        where
+          s' = Builder.fromText (Text.replicate (n - Text.length s) " " <> s)
     widths :: [Int]
     widths =
       foldl'
@@ -290,12 +317,19 @@ renderTable (Table labels rowGroups) =
             foldl'
               ( \acc2 -> \case
                   Row [] -> error "empty row"
-                  Row (Cell _ s0 : cols) ->
-                    zipWith max (max (length label) (length s0) : map (\(Cell _ s) -> length s) cols) acc2
-                  Empty -> acc2
+                  Row (col : cols) -> zipWith max (max (Text.length label) (cellWidth col) : map cellWidth cols) acc2
+                  EmptyRow -> acc2
               )
               acc
               rows
         )
-        (map (subtract 1 . length) labels)
+        (map (subtract 1 . Text.length) labels)
         rowGroups
+
+sepBy :: [Builder] -> Builder -> Builder
+sepBy xs x =
+  mconcat (List.intersperse x xs)
+
+build :: Builder -> Text
+build =
+  LazyText.toStrict . Builder.toLazyText

@@ -11,11 +11,12 @@ import Control.Monad as X
 import Data.Coerce as X (coerce)
 import Data.Foldable as X (fold, foldl')
 import Data.Proxy as X (Proxy (..))
+import Data.Text as X (Text)
 import Data.Typeable (showsTypeRep, typeRep)
-import Numeric.Natural as X (Natural)
 import Data.Typeable as X (Typeable)
 import Data.Word as X (Word64)
 import GHC.Generics as X (Generic)
+import Numeric.Natural as X (Natural)
 import Text.Read (readMaybe)
 import Prelude as X hiding (read)
 

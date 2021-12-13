@@ -7,7 +7,7 @@ import ParkBench.Prelude
 
 -- | A named thing.
 data Named a = Named
-  { name :: String,
+  { name :: {-# UNPACK #-} !Text,
     thing :: a
   }
   deriving stock (Foldable, Functor, Traversable)

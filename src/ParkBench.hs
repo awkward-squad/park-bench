@@ -9,6 +9,8 @@ where
 import Control.Concurrent (threadDelay)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NonEmpty
+import qualified Data.Text.Lazy.Builder as Builder
+import qualified Data.Text.Lazy.IO as LazyText
 import qualified ParkBench.Benchmark as Benchmark
 import ParkBench.Named (Named (Named))
 import qualified ParkBench.Named as Named
@@ -44,7 +46,7 @@ benchmark' xs = do
   let renderSummaries :: IO ()
       renderSummaries = do
         summaries <- getSummaries
-        putStrLn ("\ESC[2J" ++ renderTable (estimatesToTable summaries))
+        LazyText.putStrLn (Builder.toLazyText ("\ESC[2J" <> renderTable (estimatesToTable summaries)))
   let loop :: NonEmpty (Statistics.Pull RtsStats) -> IO void
       loop ps0 = do
         renderSummaries
@@ -55,7 +57,7 @@ benchmark' xs = do
 -- | Benchmark a function. The result is evaluated to weak head normal form.
 function ::
   -- |
-  String ->
+  Text ->
   -- |
   (a -> b) ->
   -- |
@@ -67,7 +69,7 @@ function name f x =
 -- | Benchmark an IO action. The result is evaluated to weak head normal form.
 action ::
   -- |
-  String ->
+  Text ->
   -- |
   IO a ->
   Benchmark

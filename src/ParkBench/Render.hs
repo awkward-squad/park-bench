@@ -5,26 +5,27 @@ where
 
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NonEmpty
+import qualified Data.Text as Text
 import ParkBench.Named (Named)
 import qualified ParkBench.Named as Named
 import ParkBench.Prelude
 import ParkBench.Pretty
 import ParkBench.RtsStats
 import ParkBench.Statistics
-import Text.Printf (printf)
 
 estimatesToTable :: NonEmpty (Named (Estimate RtsStats)) -> Table
 estimatesToTable summaries =
   Table (estimatesToHeader summaries) (estimatesToRowGroups (Named.thing <$> summaries))
 
-estimatesToHeader :: NonEmpty (Named (Estimate RtsStats)) -> [String]
+estimatesToHeader :: NonEmpty (Named (Estimate RtsStats)) -> [Text]
 estimatesToHeader (NonEmpty.toList -> names) =
   (if length names > 2 then (++ ["Total"]) else id) (go names)
   where
-    go :: [Named (Estimate RtsStats)] -> [String]
+    go :: [Named (Estimate RtsStats)] -> [Text]
     go = \case
       [] -> []
-      x : xs -> "" : printf "%s─(n=%d)" (map dash (Named.name x)) (samples (Named.thing x)) : go xs
+      x : xs ->
+        "" : (Text.map dash (Named.name x) <> "─(n=" <> Text.pack (show (samples (Named.thing x))) <> ")") : go xs
 
     dash :: Char -> Char
     dash = \case
