@@ -35,7 +35,7 @@ instance Semigroup a => Semigroup (Timed a) where
 data Estimate a = Estimate
   { kvariance :: {-# UNPACK #-} !Rational,
     mean :: {-# UNPACK #-} !(Timed a),
-    samples :: !Natural
+    samples :: {-# UNPACK #-} !Word64
   }
   deriving stock (Functor, Show)
 
@@ -47,7 +47,7 @@ variance :: Estimate a -> Rational
 variance (Estimate kvariance _ samples) =
   if samples == 1
     then 0
-    else kvariance / n2r (samples - 1)
+    else kvariance / w2r (samples - 1)
 
 -- | @updateEstimate v@ creates an estimate per thing-that-took-time @v@ that was a run of 1 iteration.
 initialEstimate :: Timed a -> Estimate a
@@ -65,8 +65,8 @@ updateEstimate n (Timed tn value1) (Estimate kvariance (Timed mean value0) sampl
   where
     kvariance' = kvariance + nr * (t1 - mean) * (t1 - mean')
     mean' = rollmean mean tn
-    samples' = samples + w2n n
-    samplesr' = n2r samples'
+    samples' = samples + n
+    samplesr' = w2r samples'
     t1 = tn / nr
     value' = roll rollmean value0 value1
     rollmean u0 u1 = u0 + ((u1 - nr * u0) / samplesr')
@@ -77,8 +77,8 @@ class Roll a where
 
 data Pull a
   = Pull
-      -- latest estimate
-      !(Estimate a)
+      -- amount of time this pull has gotten
+      {-# UNPACK #-} !Rational
       (IO (Pull a))
 
 pull :: NonEmpty (Pull a) -> IO (NonEmpty (Pull a))
@@ -93,10 +93,10 @@ insertPull p ps =
   NonEmpty.fromList (insertPull' p ps)
 
 insertPull' :: Pull a -> [Pull a] -> [Pull a]
-insertPull' p0@(Pull e0 _) = \case
+insertPull' p0@(Pull t0 _) = \case
   [] -> [p0]
-  p1@(Pull e1 _) : ps ->
-    if kvariance e0 > kvariance e1
+  p1@(Pull t1 _) : ps ->
+    if t0 < t1
       then p0 : p1 : ps
       else p1 : insertPull' p0 ps
 
@@ -112,25 +112,16 @@ benchmark run = do
         t2 <- run n
         let !e1 = updateEstimate n t2 e0
         writeIORef ref e1
-        pure (Pull e1 (another e1))
+        pure (Pull (w2r (samples e1) * nanoseconds (mean e1)) (another e1))
         where
           n = next e0
 
-  pure (readIORef ref, Pull e (another e))
+  pure (readIORef ref, Pull (nanoseconds (mean e)) (another e))
   where
     -- target runs that take 0.1 seconds (e.g. 500_000_000 would be 0.5 seconds)
     next :: Estimate a -> Word64
     next Estimate {mean = Timed nanoseconds _, samples} =
-      max 1 (min (n2w samples) (floor (100_000_000 / nanoseconds)))
-
-n2r :: Natural -> Rational
-n2r = fromIntegral
-
-n2w :: Natural -> Word64
-n2w = fromIntegral
-
-w2n :: Word64 -> Natural
-w2n = fromIntegral
+      max 1 (min samples (floor (100_000_000 / nanoseconds)))
 
 w2r :: Word64 -> Rational
 w2r = fromIntegral
