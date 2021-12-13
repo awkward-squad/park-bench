@@ -129,11 +129,25 @@ instance Cellular PercentageCell where
   cellString (PercentageCell r) = prettyPercentage r
   cellValue = coerce
 
+prettyDelta :: Rational -> Builder
+prettyDelta n
+  | n >= 1 =
+    let s = Builder.rational3 (n + 1)
+     in if Builder.null s
+          then ""
+          else s <> "x"
+  | n <= -0.5 =
+    let s = Builder.rational3 (-1 `divide` (n + 1))
+     in if Builder.null s
+          then ""
+          else s <> "x"
+  | otherwise = prettyPercentage n
+
 prettyPercentage :: Rational -> Builder
 prettyPercentage n =
   if Builder.null s
     then ""
-    else s <> "%"
+    else s <> "٪"
   where
     s = Builder.rational3 (n * 100)
 
@@ -192,7 +206,7 @@ maketh (summary0 :| summaries0) (R name (f :: a -> Maybe b)) =
     delta v1 v2 =
       if Builder.null (cellString v1) || Builder.null (cellString v2)
         then EmptyCell
-        else colorize (prettyPercentage ((cellValue v2 - cellValue v1) `divide` cellValue v1))
+        else colorize (prettyDelta ((cellValue v2 - cellValue v1) `divide` cellValue v1))
       where
         colorize :: Builder -> Cell
         colorize =
