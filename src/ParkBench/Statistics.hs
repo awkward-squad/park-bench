@@ -1,12 +1,14 @@
 module ParkBench.Statistics
-  ( benchmark,
-    Pull,
-    pull,
+  ( Timed (..),
     Estimate (..),
+    initialEstimate,
+    updateEstimate,
     stdev,
     variance,
     Roll (..),
-    Timed (..),
+    benchmark,
+    Pull,
+    pull,
   )
 where
 
@@ -17,7 +19,7 @@ import ParkBench.Prelude
 
 -- | A value that took a certan time to compute.
 data Timed a = Timed
-  { time :: !Nanoseconds,
+  { nanoseconds :: {-# UNPACK #-} !Rational,
     value :: !a
   }
   deriving stock (Functor, Show)
@@ -32,9 +34,8 @@ instance Semigroup a => Semigroup (Timed a) where
 
 data Estimate a = Estimate
   { kvariance :: {-# UNPACK #-} !Rational,
-    mean :: {-# UNPACK #-} !Nanoseconds,
-    samples :: {-# UNPACK #-} !Natural,
-    value :: !a
+    mean :: !(Timed a),
+    samples :: {-# UNPACK #-} !Natural
   }
   deriving stock (Functor, Show)
 
@@ -43,25 +44,24 @@ stdev =
   sqrt . (fromRational @Double) . variance
 
 variance :: Estimate a -> Rational
-variance (Estimate kvariance _ samples _) =
+variance (Estimate kvariance _ samples) =
   if samples == 1
     then 0
     else kvariance / n2r (samples - 1)
 
--- @updateEstimate v@ creates an estimate per thing-that-took-time @v@ that was a run of 1 iteration.
+-- | @updateEstimate v@ creates an estimate per thing-that-took-time @v@ that was a run of 1 iteration.
 initialEstimate :: Timed a -> Estimate a
-initialEstimate Timed {time, value} =
+initialEstimate mean =
   Estimate
     { kvariance = 0,
-      mean = time,
-      samples = 1,
-      value
+      mean,
+      samples = 1
     }
 
--- @updateEstimate n v e@ updates estimate @e@ per thing-that-took-time @v@ that was a run of @n@ iterations.
+-- | @updateEstimate n v e@ updates estimate @e@ per thing-that-took-time @v@ that was a run of @n@ iterations.
 updateEstimate :: Roll a => Word64 -> Timed a -> Estimate a -> Estimate a
-updateEstimate n (Timed tn value1) (Estimate kvariance mean samples value0) =
-  Estimate kvariance' mean' samples' value'
+updateEstimate n (Timed tn value1) (Estimate kvariance (Timed mean value0) samples) =
+  Estimate kvariance' (Timed mean' value') samples'
   where
     kvariance' = kvariance + nr * (t1 - mean) * (t1 - mean')
     mean' = rollmean mean tn
@@ -119,7 +119,7 @@ benchmark run = do
   where
     -- target runs that take 0.1 seconds (e.g. 500_000_000 would be 0.5 seconds)
     next :: Estimate a -> Word64
-    next Estimate {mean, samples} =
+    next Estimate {mean = Timed mean _, samples} =
       max 1 (min (n2w samples) (floor (100_000_000 / mean)))
 
 n2r :: Natural -> Rational

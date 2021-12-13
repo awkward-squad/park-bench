@@ -8,48 +8,65 @@ where
 
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NonEmpty
-import qualified ParkBench.InProcess as InProcess
+import qualified ParkBench.Benchmark as Benchmark
+import ParkBench.Named (Named (Named))
+import qualified ParkBench.Named as Named
 import ParkBench.Prelude
 import ParkBench.Pretty (renderTable)
+import ParkBench.Render (estimatesToTable)
+import ParkBench.RtsStats (RtsStats)
 import qualified ParkBench.Statistics as Statistics
 
 newtype Benchmark
-  = Benchmark (String, Word64 -> IO (Statistics.Timed InProcess.Summary))
+  = Benchmark (Named (Word64 -> IO (Statistics.Timed RtsStats)))
 
-benchmark :: [Benchmark] -> IO ()
+benchmark ::
+  -- |
+  [Benchmark] ->
+  IO ()
 benchmark xs =
   case NonEmpty.nonEmpty xs of
     Nothing -> pure ()
     Just ys -> benchmark' (coerce ys)
 
-benchmark' :: NonEmpty (String, Word64 -> IO (Statistics.Timed InProcess.Summary)) -> IO void
+benchmark' :: NonEmpty (Named (Word64 -> IO (Statistics.Timed RtsStats))) -> IO void
 benchmark' xs = do
-  summaries0 <- (traverse . _2) Statistics.benchmark xs
-  let pulls :: NonEmpty (Statistics.Pull InProcess.Summary)
+  summaries0 <- (traverse . traverse) Statistics.benchmark xs
+  let pulls :: NonEmpty (Statistics.Pull RtsStats)
       pulls =
-        (\(_, (_, x)) -> x) <$> summaries0
-  let getSummaries :: IO (NonEmpty (String, Statistics.Estimate InProcess.Summary))
+        snd . Named.thing <$> summaries0
+  let getSummaries :: IO (NonEmpty (Named (Statistics.Estimate RtsStats)))
       getSummaries =
-        traverse (\(x, (y, _)) -> (x,) <$> y) summaries0
+        traverse (traverse fst) summaries0
   let renderSummaries :: IO ()
       renderSummaries = do
         summaries <- getSummaries
-        putStrLn ("\ESC[2J" ++ renderTable (InProcess.summariesToTable summaries))
-  let loop :: NonEmpty (Statistics.Pull InProcess.Summary) -> IO void
+        putStrLn ("\ESC[2J" ++ renderTable (estimatesToTable summaries))
+  let loop :: NonEmpty (Statistics.Pull RtsStats) -> IO void
       loop ps0 = do
         renderSummaries
         ps1 <- Statistics.pull ps0
         loop ps1
   loop pulls
 
-function :: String -> (a -> b) -> a -> Benchmark
+-- | Benchmark a function. The result is evaluated to weak head normal form.
+function ::
+  -- |
+  String ->
+  -- |
+  (a -> b) ->
+  -- |
+  a ->
+  Benchmark
 function name f x =
-  Benchmark (name, InProcess.function (const f) x)
+  Benchmark (Named name (Benchmark.function (const f) x))
 
-action :: String -> IO a -> Benchmark
+-- | Benchmark an IO action. The result is evaluated to weak head normal form.
+action ::
+  -- |
+  String ->
+  -- |
+  IO a ->
+  Benchmark
 action name x =
-  Benchmark (name, InProcess.action x)
-
-_2 :: Functor f => (b -> f c) -> (a, b) -> f (a, c)
-_2 f (a, b) =
-  (a,) <$> f b
+  Benchmark (Named name (Benchmark.action x))

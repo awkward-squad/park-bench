@@ -37,6 +37,7 @@ common component
     DeriveDataTypeable
     DeriveFunctor
     DeriveGeneric
+    DeriveTraversable
     DerivingStrategies
     DerivingVia
     DuplicateRecordFields
@@ -81,8 +82,10 @@ library
     ParkBench
   hs-source-dirs: src
   other-modules:
-    ParkBench.InProcess
+    ParkBench.Benchmark
     ParkBench.Numeric
     ParkBench.Prelude
     ParkBench.Pretty
+    ParkBench.Render
+    ParkBench.RtsStats
     ParkBench.Statistics
