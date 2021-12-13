@@ -94,3 +94,4 @@ library
     ParkBench.Render
     ParkBench.RtsStats
     ParkBench.Statistics
+    ParkBench.Terminal

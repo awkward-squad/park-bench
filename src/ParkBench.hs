@@ -20,6 +20,7 @@ import ParkBench.Pretty (renderTable)
 import ParkBench.Render (estimatesToTable)
 import ParkBench.RtsStats (RtsStats)
 import qualified ParkBench.Statistics as Statistics
+import ParkBench.Terminal (withTerminal)
 
 -- | A benchmark.
 newtype Benchmark
@@ -36,25 +37,29 @@ benchmark xs =
     Just ys -> benchmark' (coerce ys)
 
 benchmark' :: NonEmpty (Named (Word64 -> IO (Statistics.Timed RtsStats))) -> IO void
-benchmark' xs = do
-  summaries0 <- (traverse . traverse) Statistics.benchmark xs
-  let pulls :: NonEmpty (Statistics.Pull RtsStats)
-      pulls =
-        snd . Named.thing <$> summaries0
-  let getSummaries :: IO (NonEmpty (Named (Statistics.Estimate RtsStats)))
-      getSummaries =
-        traverse (traverse fst) summaries0
-  let renderSummaries :: IO ()
-      renderSummaries = do
-        summaries <- getSummaries
-        ByteString.putStr
-          (Text.encodeUtf8 (Builder.build ("\ESC[2J" <> renderTable (estimatesToTable summaries) <> Builder.c '\n')))
-  let loop :: NonEmpty (Statistics.Pull RtsStats) -> IO void
-      loop ps0 = do
-        renderSummaries
-        ps1 <- Statistics.pull ps0
-        loop ps1
-  loop pulls
+benchmark' xs =
+  withTerminal do
+    summaries0 <- (traverse . traverse) Statistics.benchmark xs
+    let pulls :: NonEmpty (Statistics.Pull RtsStats)
+        pulls =
+          snd . Named.thing <$> summaries0
+    let getSummaries :: IO (NonEmpty (Named (Statistics.Estimate RtsStats)))
+        getSummaries =
+          traverse (traverse fst) summaries0
+    let renderSummaries :: NonEmpty (Named (Statistics.Estimate RtsStats)) -> Int -> IO Int
+        renderSummaries summaries newlines0 = do
+          let screen = renderTable (estimatesToTable summaries)
+          let bytes = Text.encodeUtf8 (Builder.build ("\ESC[" <> Builder.decimal newlines0 <> "F\ESC[0J" <> screen))
+          let newlines = ByteString.count 10 bytes
+          ByteString.putStr bytes
+          pure newlines
+    let loop :: NonEmpty (Statistics.Pull RtsStats) -> Int -> IO void
+        loop ps0 newlines0 = do
+          summaries <- getSummaries
+          newlines1 <- renderSummaries summaries newlines0
+          ps1 <- Statistics.pull ps0
+          loop ps1 newlines1
+    loop pulls 0
 
 -- | Benchmark a function. The result is evaluated to weak head normal form.
 function ::
