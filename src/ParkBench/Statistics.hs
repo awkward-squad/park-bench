@@ -1,15 +1,12 @@
--- Basic technique for determining when an estimate is good enough is cribbed from
--- https://github.com/Bodigrim/tasty-bench
 module ParkBench.Statistics
   ( benchmark,
     Pull,
     pull,
     Estimate (..),
-    goodness,
-    Sample (..),
-    Scaled (..),
+    stdev,
+    variance,
+    Roll (..),
     Timed (..),
-    fit,
   )
 where
 
@@ -21,9 +18,7 @@ import ParkBench.Prelude
 -- | A value that took a certan time to compute.
 data Timed a = Timed
   { time :: !Seconds,
-    -- the value is intentionally lazy so we don't waste time computing it only to throw it away due to an
-    -- insufficiently accurate measurement (i.e. stdev too high).
-    value :: a
+    value :: !a
   }
   deriving stock (Functor, Show)
 
@@ -36,59 +31,55 @@ instance Semigroup a => Semigroup (Timed a) where
     Timed (n0 + n1) (x0 <> x1)
 
 data Estimate a = Estimate
-  { mean :: !(Timed a),
-    stdev :: !Double
+  { kvariance :: {-# UNPACK #-} !Rational,
+    mean :: {-# UNPACK #-} !Seconds,
+    samples :: {-# UNPACK #-} !Natural,
+    value :: !a
   }
   deriving stock (Functor, Show)
 
--- | A measure of goodness of the estimate, from 0 to 1.
-goodness :: Estimate a -> Double
-goodness (Estimate (Timed m _) s) =
-  1 - (s / realToFrac m)
+stdev :: Estimate a -> Double
+stdev =
+  sqrt . (fromRational @Double) . variance
 
-estimate :: Sample a => Timed a -> Timed a -> Estimate a
-estimate (Timed t0 x0) (Timed t1 x1) =
+variance :: Estimate a -> Rational
+variance (Estimate kvariance _ samples _) =
+  if samples == 1
+    then 0
+    else kvariance / n2r (samples - 1)
+
+-- @updateEstimate v@ creates an estimate per thing-that-took-time @v@ that was a run of 1 iteration.
+initialEstimate :: Timed a -> Estimate a
+initialEstimate Timed {time, value} =
   Estimate
-    { mean = Timed m (combine2 x0 x1),
-      stdev = std t0 m t1
+    { kvariance = 0,
+      mean = time,
+      samples = 1,
+      value
     }
+
+-- @updateEstimate n v e@ updates estimate @e@ per thing-that-took-time @v@ that was a run of @n@ iterations.
+updateEstimate :: Roll a => Word64 -> Timed a -> Estimate a -> Estimate a
+updateEstimate n (Timed tn value1) (Estimate kvariance mean samples value0) =
+  Estimate kvariance' mean' samples' value'
   where
-    m :: Rational
-    m =
-      fit t0 t1
+    kvariance' = kvariance + nr * (t1 - mean) * (t1 - mean')
+    mean' = rollmean mean tn
+    samples' = samples + w2n n
+    samplesr' = n2r samples'
+    t1 = tn / nr
+    value' = roll rollmean value0 value1
+    rollmean u0 u1 = u0 + ((u1 - nr * u0) / samplesr')
+    nr = w2r n
 
-    std :: Rational -> Rational -> Rational -> Double
-    std x y z =
-      sqrt (realToFrac (sqr (x - y) + sqr (z - 2 * y)))
-      where
-        sqr :: Rational -> Rational
-        sqr n =
-          n * n
-
-class Scaled a where
-  downscale :: Word64 -> a -> a
-
-instance Scaled Double where
-  downscale n w = w / fromIntegral n
-
-instance Scaled Rational where
-  downscale n w = w / fromIntegral n
-
-instance Scaled a => Scaled (Maybe a) where
-  downscale n = fmap (downscale n)
-
-instance Scaled a => Scaled (Estimate a) where
-  downscale n (Estimate m s) = Estimate (downscale n m) (downscale n s)
-
-instance Scaled a => Scaled (Timed a) where
-  downscale n (Timed m x) = Timed (downscale n m) (downscale n x)
-
-class Sample a where
-  -- | Combine two samples, where the second is of twice as many iterations as the first.
-  combine2 :: a -> a -> a
+class Roll a where
+  roll :: (Rational -> Rational -> Rational) -> a -> a -> a
 
 data Pull a
-  = Pull !Double (IO (Pull a))
+  = Pull
+      -- kvariance of latest estimate
+      !Rational
+      (IO (Pull a))
 
 pull :: NonEmpty (Pull a) -> IO (NonEmpty (Pull a))
 pull (Pull _ p0 :| ps) = do
@@ -109,20 +100,27 @@ insertPull' p0@(Pull n _) = \case
       else p1 : insertPull' p0 ps
 
 -- | Benchmark forever, providing better and better estimates.
-benchmark :: forall a. (Sample a, Scaled a) => (Word64 -> IO (Timed a)) -> IO (IO (Estimate a), Pull a)
+benchmark :: forall a. Roll a => (Word64 -> IO (Timed a)) -> IO (IO (Estimate a), Pull a)
 benchmark run = do
-  t <- run 1
-  ref <- newIORef (Estimate t 0)
+  ref <- do
+    t <- run 1
+    newIORef (initialEstimate t)
 
-  let another :: Word64 -> Timed a -> IO (Pull a)
-      another n t1 = do
+  let another :: Word64 -> IO (Pull a)
+      another n = do
         t2 <- run (2 * n)
-        let e = estimate t1 t2
-        writeIORef ref (downscale n e)
-        pure (Pull (goodness e) (another (2 * n) t2))
+        a0 <- readIORef ref
+        let !a1 = updateEstimate (2 * n) t2 a0
+        writeIORef ref a1
+        pure (Pull (kvariance a0) (another (2 * n)))
 
-  pure (readIORef ref, Pull 1 (another 1 t))
+  pure (readIORef ref, Pull 0 (another 1))
 
-fit :: Rational -> Rational -> Rational
-fit x1 x2 =
-  (x1 / 5) + (2 * x2 / 5)
+w2n :: Word64 -> Natural
+w2n = fromIntegral
+
+w2r :: Word64 -> Rational
+w2r = fromIntegral
+
+n2r :: Natural -> Rational
+n2r = fromIntegral
