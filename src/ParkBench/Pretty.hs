@@ -114,7 +114,7 @@ prettyEstSeconds n m =
     then prettySeconds n
     else prettySeconds n <> " ± " <> m'
   where
-    m' = prettySeconds (approxRational m (1 / 1_000_000_000))
+    m' = prettySeconds (2 * (approxRational m (1 / 1_000_000_000)))
 
 newtype PercentageCell
   = PercentageCell Rational
