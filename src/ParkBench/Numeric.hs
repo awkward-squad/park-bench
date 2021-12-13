@@ -1,7 +1,6 @@
 module ParkBench.Numeric
   ( divide,
     divide',
-    readRational,
   )
 where
 
@@ -14,7 +13,3 @@ divide n d =
 divide' :: Rational -> Rational -> Maybe Rational
 divide' n d =
   if d == 0 then Nothing else Just (n / d)
-
-readRational :: String -> Rational
-readRational =
-  realToFrac . read @Double

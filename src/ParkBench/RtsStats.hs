@@ -19,24 +19,24 @@ import ParkBench.Statistics
 
 -- TODO nonmoving_gc_*
 data RtsStats = RtsStats
-  { allocated_bytes :: !Rational,
-    copied_bytes :: !Rational,
-    cpu_ns :: !Rational,
-    cumulative_live_bytes :: !Rational,
-    cumulative_par_balanced_copied_bytes :: !Rational,
-    elapsed_ns :: !Rational,
-    gc_cpu_ns :: !Rational,
-    gc_elapsed_ns :: !Rational,
-    gcs :: !Rational,
-    major_gcs :: !Rational,
-    max_compact_bytes :: !Rational,
-    max_large_objects_bytes :: !Rational,
-    max_live_bytes :: !Rational,
-    max_mem_in_use_bytes :: !Rational,
-    max_slop_bytes :: !Rational,
-    mutator_cpu_ns :: !Rational,
-    mutator_elapsed_ns :: !Rational,
-    par_copied_bytes :: !Rational
+  { allocated_bytes :: {-# UNPACK #-} !Rational,
+    copied_bytes :: {-# UNPACK #-} !Rational,
+    cpu_ns :: {-# UNPACK #-} !Rational,
+    cumulative_live_bytes :: {-# UNPACK #-} !Rational,
+    cumulative_par_balanced_copied_bytes :: {-# UNPACK #-} !Rational,
+    elapsed_ns :: {-# UNPACK #-} !Rational,
+    gc_cpu_ns :: {-# UNPACK #-} !Rational,
+    gc_elapsed_ns :: {-# UNPACK #-} !Rational,
+    gcs :: {-# UNPACK #-} !Rational,
+    major_gcs :: {-# UNPACK #-} !Rational,
+    max_compact_bytes :: {-# UNPACK #-} !Rational,
+    max_large_objects_bytes :: {-# UNPACK #-} !Rational,
+    max_live_bytes :: {-# UNPACK #-} !Rational,
+    max_mem_in_use_bytes :: {-# UNPACK #-} !Rational,
+    max_slop_bytes :: {-# UNPACK #-} !Rational,
+    mutator_cpu_ns :: {-# UNPACK #-} !Rational,
+    mutator_elapsed_ns :: {-# UNPACK #-} !Rational,
+    par_copied_bytes :: {-# UNPACK #-} !Rational
   }
   deriving stock (Show)
 
