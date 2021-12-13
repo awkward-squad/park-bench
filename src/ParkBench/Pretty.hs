@@ -19,10 +19,6 @@ module ParkBench.Pretty
     Cell (..),
     Color (..),
     isEmptyCell,
-    blue,
-    green,
-    red,
-    white,
     renderTable,
   )
 where
@@ -37,6 +33,7 @@ import ParkBench.Builder (Builder)
 import qualified ParkBench.Builder as Builder
 import ParkBench.Numeric (divide)
 import ParkBench.Prelude
+import qualified ParkBench.Terminal as Terminal
 
 ------------------------------------------------------------------------------------------------------------------------
 -- High-level row/cell machinery
@@ -187,7 +184,7 @@ maketh (summary0 :| summaries0) (R name (f :: a -> Maybe b)) =
   where
     cols :: [Cell]
     cols =
-      maybe EmptyCell (white . Builder.build . cellString) (f summary0) : makeCols (f summary0) summaries0
+      maybe EmptyCell (Cell White . Builder.build . cellString) (f summary0) : makeCols (f summary0) summaries0
     -- TODO make this cleaner
     makeCols :: Maybe b -> [a] -> [Cell]
     makeCols s0 = \case
@@ -200,8 +197,8 @@ maketh (summary0 :| summaries0) (R name (f :: a -> Maybe b)) =
               _ -> []
       s1 : ss ->
         case (s0, f s1) of
-          (Nothing, Just v1) -> EmptyCell : white (Builder.build (cellString v1)) : makeCols (Just v1) ss
-          (Just v0, Just v1) -> delta v0 v1 : white (Builder.build (cellString v1)) : makeCols (Just v1) ss
+          (Nothing, Just v1) -> EmptyCell : Cell White (Builder.build (cellString v1)) : makeCols (Just v1) ss
+          (Just v0, Just v1) -> delta v0 v1 : Cell White (Builder.build (cellString v1)) : makeCols (Just v1) ss
           (_, Nothing) -> EmptyCell : EmptyCell : makeCols Nothing ss
     delta :: b -> b -> Cell
     delta v1 v2 =
@@ -212,9 +209,9 @@ maketh (summary0 :| summaries0) (R name (f :: a -> Maybe b)) =
         colorize :: Builder -> Cell
         colorize =
           ( case compare v1 v2 of
-              LT -> green
-              EQ -> white
-              GT -> red
+              LT -> Cell Green
+              EQ -> Cell White
+              GT -> Cell Red
           )
             . Builder.build
 
@@ -240,9 +237,9 @@ cellBuilder = \case
   EmptyCell -> Builder.empty
   Cell color (Builder.t -> s) ->
     case color of
-      Blue -> "\ESC[34m" <> s <> "\ESC[39m"
-      Green -> "\ESC[32m" <> s <> "\ESC[39m"
-      Red -> "\ESC[31m" <> s <> "\ESC[39m"
+      Blue -> Terminal.blue s
+      Green -> Terminal.green s
+      Red -> Terminal.red s
       White -> s
 
 cellWidth :: Cell -> Int
@@ -253,25 +250,13 @@ cellWidth = \case
 
 instance IsString Cell where
   fromString =
-    white . Text.pack
+    Cell White . Text.pack
 
 data Color
   = Blue
   | Green
   | Red
   | White
-
-blue :: Text -> Cell
-blue = Cell Blue
-
-green :: Text -> Cell
-green = Cell Green
-
-red :: Text -> Cell
-red = Cell Red
-
-white :: Text -> Cell
-white = Cell White
 
 isEmptyCell :: Cell -> Bool
 isEmptyCell = \case

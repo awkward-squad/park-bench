@@ -20,7 +20,7 @@ import ParkBench.Pretty (renderTable)
 import ParkBench.Render (estimatesToTable)
 import ParkBench.RtsStats (RtsStats)
 import qualified ParkBench.Statistics as Statistics
-import ParkBench.Terminal (withTerminal)
+import ParkBench.Terminal (clearFromCursor, cursorUp, withTerminal)
 
 -- | A benchmark.
 newtype Benchmark
@@ -48,11 +48,17 @@ benchmark' xs =
           traverse (traverse fst) summaries0
     let renderSummaries :: NonEmpty (Named (Statistics.Estimate RtsStats)) -> Int -> IO Int
         renderSummaries summaries newlines0 = do
-          let screen = renderTable (estimatesToTable summaries)
-          let bytes = Text.encodeUtf8 (Builder.build ("\ESC[" <> Builder.decimal newlines0 <> "F\ESC[0J" <> screen))
-          let newlines = ByteString.count 10 bytes
           ByteString.putStr bytes
-          pure newlines
+          pure (ByteString.count 10 bytes)
+          where
+            bytes =
+              Text.encodeUtf8
+                ( Builder.build
+                    ( cursorUp newlines0
+                        <> clearFromCursor
+                        <> renderTable (estimatesToTable summaries)
+                    )
+                )
     let loop :: NonEmpty (Statistics.Pull RtsStats) -> Int -> IO void
         loop ps0 newlines0 = do
           summaries <- getSummaries
