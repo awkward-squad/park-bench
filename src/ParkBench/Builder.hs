@@ -4,6 +4,7 @@ module ParkBench.Builder
     c,
     cs,
     Builder.decimal,
+    ParkBench.Builder.empty,
     t,
     ParkBench.Builder.null,
     sepBy,
@@ -32,6 +33,11 @@ c =
 cs :: Int -> Char -> Builder
 cs n =
   mconcat . replicate n . Builder.singleton
+
+empty :: Builder
+empty =
+  mempty
+{-# INLINE empty #-}
 
 -- | /O(n)/.
 null :: Builder -> Bool

@@ -19,6 +19,7 @@ module ParkBench.Pretty
     Cell (..),
     Color (..),
     isEmptyCell,
+    blue,
     green,
     red,
     white,
@@ -218,7 +219,7 @@ maketh (summary0 :| summaries0) (R name (f :: a -> Maybe b)) =
             . Builder.build
 
 data Table
-  = Table ![Text] ![RowGroup]
+  = Table ![Cell] ![RowGroup]
 
 data RowGroup
   = RowGroup {-# UNPACK #-} !Text ![Row]
@@ -229,11 +230,24 @@ data Row
   | EmptyRow
 
 data Cell
-  = Cell !Color {-# UNPACK #-} !Text
+  = Append !Cell !Cell
   | EmptyCell
+  | Cell !Color {-# UNPACK #-} !Text
+
+cellBuilder :: Cell -> Builder
+cellBuilder = \case
+  Append x y -> cellBuilder x <> cellBuilder y
+  EmptyCell -> Builder.empty
+  Cell color (Builder.t -> s) ->
+    case color of
+      Blue -> "\ESC[34m" <> s <> "\ESC[39m"
+      Green -> "\ESC[32m" <> s <> "\ESC[39m"
+      Red -> "\ESC[31m" <> s <> "\ESC[39m"
+      White -> s
 
 cellWidth :: Cell -> Int
 cellWidth = \case
+  Append x y -> cellWidth x + cellWidth y
   Cell _ s -> Text.length s
   EmptyCell -> 0
 
@@ -242,9 +256,13 @@ instance IsString Cell where
     white . Text.pack
 
 data Color
-  = White
-  | Red
+  = Blue
   | Green
+  | Red
+  | White
+
+blue :: Text -> Cell
+blue = Cell Blue
 
 green :: Text -> Cell
 green = Cell Green
@@ -257,9 +275,14 @@ white = Cell White
 
 isEmptyCell :: Cell -> Bool
 isEmptyCell = \case
+  Append x y -> isEmptyCell x && isEmptyCell y
   -- don't yet have invariant that s is non-null
   Cell _ s -> Text.null s
   EmptyCell -> True
+
+data Align
+  = AlignLeft
+  | AlignRight
 
 renderTable :: Table -> Builder
 renderTable (Table labels rowGroups) =
@@ -267,10 +290,10 @@ renderTable (Table labels rowGroups) =
   where
     header :: Builder
     header =
-      let middle =
-            (map (\(s, n) -> Builder.t s <> Builder.cs (n + 2 - Text.length s) '─') (zip labels widths))
-              `Builder.sepBy` Builder.c '┬'
-       in Builder.c '┌' <> middle <> Builder.c '┐'
+      Builder.c '┌'
+        <> ((map (renderCell AlignLeft '─') (zip (map (+ 2) widths) labels)) `Builder.sepBy` Builder.c '┬')
+        <> Builder.c '┐'
+
     line :: Text -> Builder
     line label =
       Builder.c '├'
@@ -282,30 +305,32 @@ renderTable (Table labels rowGroups) =
           (\n -> Builder.c '┼' <> Builder.cs (n + 2) '─')
           (tail widths)
         <> Builder.c '┤'
+
     footer :: Builder
     footer =
       Builder.c '└'
         <> ((map (\n -> Builder.cs (n + 2) '─') widths) `Builder.sepBy` Builder.c '┴')
         <> Builder.c '┘'
+
     renderRowGroup :: RowGroup -> Maybe Builder
     renderRowGroup (RowGroup label rows) =
       case mapMaybe renderRow rows of
         [] -> Nothing
         s -> Just ((line label : s) `Builder.sepBy` Builder.c '\n')
+
     renderRow :: Row -> Maybe Builder
     renderRow = \case
-      Row row -> Just ("│ " <> ((map renderCell (zip widths row)) `Builder.sepBy` " │ ") <> " │")
+      Row row -> Just ("│ " <> ((map (renderCell AlignRight ' ') (zip widths row)) `Builder.sepBy` " │ ") <> " │")
       EmptyRow -> Nothing
-    renderCell :: (Int, Cell) -> Builder
-    renderCell = \case
-      (n, EmptyCell) -> Builder.cs n ' '
-      (n, Cell color s) ->
-        case color of
-          White -> s'
-          Green -> "\ESC[32m" <> s' <> "\ESC[39m"
-          Red -> "\ESC[31m" <> s' <> "\ESC[39m"
-        where
-          s' = Builder.cs (n - Text.length s) ' ' <> Builder.t s
+
+    renderCell :: Align -> Char -> (Int, Cell) -> Builder
+    renderCell align bg (n, cell) =
+      case align of
+        AlignLeft -> cellBuilder cell <> padding
+        AlignRight -> padding <> cellBuilder cell
+      where
+        padding = Builder.cs (n - cellWidth cell) bg
+
     widths :: [Int]
     widths =
       foldl'
@@ -319,5 +344,5 @@ renderTable (Table labels rowGroups) =
               acc
               rows
         )
-        (map (subtract 1 . Text.length) labels)
+        (map (subtract 1 . cellWidth) labels)
         rowGroups

@@ -18,20 +18,18 @@ estimatesToTable :: NonEmpty (Named (Estimate RtsStats)) -> Table
 estimatesToTable summaries =
   Table (estimatesToHeader summaries) (estimatesToRowGroups (Named.thing <$> summaries))
 
-estimatesToHeader :: NonEmpty (Named (Estimate RtsStats)) -> [Text]
+estimatesToHeader :: NonEmpty (Named (Estimate RtsStats)) -> [Cell]
 estimatesToHeader (NonEmpty.toList -> names) =
   (if length names > 2 then (++ ["Total"]) else id) (go names)
   where
-    go :: [Named (Estimate RtsStats)] -> [Text]
+    go :: [Named (Estimate RtsStats)] -> [Cell]
     go = \case
       [] -> []
       x : xs ->
-        "" :
-        Builder.build
-          ( Builder.t (Text.map dash (Named.name x))
-              <> "⧸"
-              <> Builder.decimal (samples (Named.thing x))
-          ) :
+        EmptyCell :
+        Append
+          (blue (Text.map dash (Named.name x)))
+          (white (Builder.build ("⧸" <> Builder.decimal (samples (Named.thing x))))) :
         go xs
 
     dash :: Char -> Char
