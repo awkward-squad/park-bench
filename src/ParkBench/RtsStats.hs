@@ -48,32 +48,32 @@ data RtsStats = RtsStats
 instance Roll RtsStats where
   roll step s0 s1 =
     RtsStats
-      { allocated_bytes = measure allocated_bytes,
-        copied_bytes = measure copied_bytes,
-        cpu_ns = measure cpu_ns,
-        cumulative_live_bytes = measure cumulative_live_bytes,
-        cumulative_par_balanced_copied_bytes = measure cumulative_par_balanced_copied_bytes,
-        elapsed_ns = measure elapsed_ns,
-        gc_cpu_ns = measure gc_cpu_ns,
-        gc_elapsed_ns = measure gc_elapsed_ns,
-        gcs = measure gcs,
-        major_gcs = measure major_gcs,
-        max_compact_bytes = gauge max_compact_bytes,
-        max_large_objects_bytes = gauge max_large_objects_bytes,
-        max_live_bytes = gauge max_live_bytes,
-        max_mem_in_use_bytes = gauge max_mem_in_use_bytes,
-        max_slop_bytes = gauge max_slop_bytes,
-        mutator_cpu_ns = measure mutator_cpu_ns,
-        mutator_elapsed_ns = measure mutator_elapsed_ns,
-        par_copied_bytes = measure par_copied_bytes
+      { allocated_bytes = averagey allocated_bytes,
+        copied_bytes = averagey copied_bytes,
+        cpu_ns = averagey cpu_ns,
+        cumulative_live_bytes = averagey cumulative_live_bytes,
+        cumulative_par_balanced_copied_bytes = averagey cumulative_par_balanced_copied_bytes,
+        elapsed_ns = averagey elapsed_ns,
+        gc_cpu_ns = averagey gc_cpu_ns,
+        gc_elapsed_ns = averagey gc_elapsed_ns,
+        gcs = averagey gcs,
+        major_gcs = averagey major_gcs,
+        max_compact_bytes = maxey max_compact_bytes,
+        max_large_objects_bytes = maxey max_large_objects_bytes,
+        max_live_bytes = maxey max_live_bytes,
+        max_mem_in_use_bytes = maxey max_mem_in_use_bytes,
+        max_slop_bytes = maxey max_slop_bytes,
+        mutator_cpu_ns = averagey mutator_cpu_ns,
+        mutator_elapsed_ns = averagey mutator_elapsed_ns,
+        par_copied_bytes = averagey par_copied_bytes
       }
     where
-      measure :: (RtsStats -> Rational) -> Rational
-      measure f =
+      averagey :: (RtsStats -> Rational) -> Rational
+      averagey f =
         step (f s0) (f s1)
 
-      gauge :: (RtsStats -> Rational) -> Rational
-      gauge f =
+      maxey :: (RtsStats -> Rational) -> Rational
+      maxey f =
         max (f s0) (f s1)
 
 allocated_bytes_per_second :: RtsStats -> Rational

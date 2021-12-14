@@ -5,6 +5,7 @@ module ParkBench.Internal
     pull,
     function,
     action,
+    measure,
 
     -- * Statistics
     Timed (..),
