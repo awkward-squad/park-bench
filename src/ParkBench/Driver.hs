@@ -47,12 +47,14 @@ isMoreUrgentThan :: Pull a -> Pull a -> Bool
 Pull t0 _ `isMoreUrgentThan` Pull t1 _ =
   t0 < t1
 
--- | An array of 'Pull', one per benchmark, in decreasing urgency order.
+-- | A @Pulls@ represents the suspended state of a collection of 1+ benchmarks.
 data Pulls a
-  = P1 !(Pull a)
+  = -- Most benchmark runs are probably only comparing 1-3 things, so we optimize those cases.
+    P1 !(Pull a)
   | P2 !(Pull a) !(Pull a)
   | P3 !(Pull a) !(Pull a) !(Pull a)
-  | Pn_ ![Pull a] -- invariant: 4+ elements
+  | -- invariant: 4+ elements
+    Pn_ ![Pull a]
 
 pattern Pn :: Pull a -> [Pull a] -> Pulls a
 pattern Pn p ps <- Pn_ (p : ps)
@@ -71,6 +73,10 @@ pulls' = \case
   a :| [b, c] -> P3 a b c
   a :| as -> Pn_ (a : as)
 
+-- | Pull on a 'Pulls', which blocks until the benchmark that has heretofore accumulated the smallest amount of runtime
+-- runs once more.
+--
+-- Returns the 'Pulls' to use next time, which reflects the latest benchmark run that just completed.
 pull :: Pulls a -> IO (Pulls a)
 pull = \case
   P1 (Pull _ p0) -> do
