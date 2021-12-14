@@ -9,7 +9,7 @@ where
 import qualified GHC.Stats as GHC
 import ParkBench.BenchmarkInternal (whnf, whnfIO)
 import ParkBench.Prelude
-import ParkBench.RtsStats
+import ParkBench.RtsStats (RtsStats (RtsStats))
 import ParkBench.Statistics (Timed (..))
 import System.Mem (performGC)
 
@@ -38,25 +38,22 @@ measure act = do
       { nanoseconds = elapsed_ns,
         value =
           RtsStats
-            { allocated_bytes = toRational (GHC.allocated_bytes s1 - GHC.allocated_bytes s0),
-              copied_bytes = toRational (GHC.copied_bytes s1 - GHC.copied_bytes s0),
-              cpu_ns = toRational (GHC.cpu_ns s1 - GHC.cpu_ns s0),
-              cumulative_live_bytes = toRational (GHC.cumulative_live_bytes s2 - GHC.cumulative_live_bytes s0),
-              cumulative_par_balanced_copied_bytes =
-                toRational (GHC.cumulative_par_balanced_copied_bytes s1 - GHC.cumulative_par_balanced_copied_bytes s0),
-              elapsed_ns,
-              gc_cpu_ns = toRational (GHC.gc_cpu_ns s1 - GHC.gc_cpu_ns s0),
-              gc_elapsed_ns = toRational (GHC.gc_elapsed_ns s1 - GHC.gc_elapsed_ns s0),
-              gcs = toRational (GHC.gcs s1 - GHC.gcs s0),
-              major_gcs = toRational (GHC.major_gcs s1 - GHC.major_gcs s0),
-              max_compact_bytes = toRational (max (GHC.max_compact_bytes s2) (GHC.max_compact_bytes s0)),
-              max_large_objects_bytes =
-                toRational (max (GHC.max_large_objects_bytes s2) (GHC.max_large_objects_bytes s0)),
-              max_live_bytes = toRational (max (GHC.max_live_bytes s2) (GHC.max_live_bytes s0)),
-              max_mem_in_use_bytes = toRational (max (GHC.max_mem_in_use_bytes s1) (GHC.max_mem_in_use_bytes s2)),
-              max_slop_bytes = toRational (max (GHC.max_slop_bytes s2) (GHC.max_slop_bytes s0)),
-              mutator_cpu_ns = toRational (GHC.mutator_cpu_ns s1 - GHC.mutator_cpu_ns s0),
-              mutator_elapsed_ns = toRational (GHC.mutator_elapsed_ns s1 - GHC.mutator_elapsed_ns s0),
-              par_copied_bytes = toRational (GHC.par_copied_bytes s1 - GHC.par_copied_bytes s0)
-            }
+            (toRational (GHC.allocated_bytes s1 - GHC.allocated_bytes s0))
+            (toRational (GHC.copied_bytes s1 - GHC.copied_bytes s0))
+            (toRational (GHC.cpu_ns s1 - GHC.cpu_ns s0))
+            (toRational (GHC.cumulative_live_bytes s2 - GHC.cumulative_live_bytes s0))
+            (toRational (GHC.cumulative_par_balanced_copied_bytes s1 - GHC.cumulative_par_balanced_copied_bytes s0))
+            elapsed_ns
+            (toRational (GHC.gc_cpu_ns s1 - GHC.gc_cpu_ns s0))
+            (toRational (GHC.gc_elapsed_ns s1 - GHC.gc_elapsed_ns s0))
+            (toRational (GHC.gcs s1 - GHC.gcs s0))
+            (toRational (GHC.major_gcs s1 - GHC.major_gcs s0))
+            (toRational (max (GHC.max_compact_bytes s2) (GHC.max_compact_bytes s0)))
+            (toRational (max (GHC.max_large_objects_bytes s2) (GHC.max_large_objects_bytes s0)))
+            (toRational (max (GHC.max_live_bytes s2) (GHC.max_live_bytes s0)))
+            (toRational (max (GHC.max_mem_in_use_bytes s1) (GHC.max_mem_in_use_bytes s2)))
+            (toRational (max (GHC.max_slop_bytes s2) (GHC.max_slop_bytes s0)))
+            (toRational (GHC.mutator_cpu_ns s1 - GHC.mutator_cpu_ns s0))
+            (toRational (GHC.mutator_elapsed_ns s1 - GHC.mutator_elapsed_ns s0))
+            (toRational (GHC.par_copied_bytes s1 - GHC.par_copied_bytes s0))
       }
