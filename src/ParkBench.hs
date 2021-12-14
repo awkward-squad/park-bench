@@ -24,7 +24,7 @@ import ParkBench.Terminal (clearFromCursor, cursorUp, withTerminal)
 
 -- | A benchmark.
 newtype Benchmark
-  = Benchmark (Named (Word64 -> IO (Statistics.Timed RtsStats)))
+  = Benchmark (Named (Word64 -> IO ()))
 
 -- | Run a collection of benchmarks.
 benchmark ::
@@ -36,10 +36,10 @@ benchmark xs =
     Nothing -> forever (threadDelay maxBound)
     Just ys -> benchmark' (coerce ys)
 
-benchmark' :: NonEmpty (Named (Word64 -> IO (Statistics.Timed RtsStats))) -> IO void
-benchmark' xs =
+benchmark' :: NonEmpty (Named (Word64 -> IO ())) -> IO void
+benchmark' fs =
   withTerminal do
-    summaries0 <- (traverse . traverse) Statistics.benchmark xs
+    summaries0 <- (traverse . traverse) (\f -> Statistics.benchmark (Benchmark.measure . f)) fs
     let pulls :: NonEmpty (Statistics.Pull RtsStats)
         pulls =
           snd . Named.thing <$> summaries0
@@ -78,7 +78,7 @@ function ::
   a ->
   Benchmark
 function name f x =
-  Benchmark (Named name (Benchmark.function (const f) x))
+  Benchmark (Named name (Benchmark.whnf f x))
 
 -- | Benchmark an IO action. The result is evaluated to weak head normal form.
 action ::
@@ -88,4 +88,4 @@ action ::
   IO a ->
   Benchmark
 action name x =
-  Benchmark (Named name (Benchmark.action x))
+  Benchmark (Named name (Benchmark.whnfIO x))

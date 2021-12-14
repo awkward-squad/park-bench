@@ -3,8 +3,10 @@ module ParkBench.Internal
     benchmark,
     Pull,
     pull,
-    function,
-    action,
+
+    -- ** Low-level
+    whnf,
+    whnfIO,
     measure,
 
     -- * Statistics

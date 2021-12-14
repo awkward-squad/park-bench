@@ -87,6 +87,7 @@ library
   hs-source-dirs: src
   other-modules:
     ParkBench.Benchmark
+    ParkBench.BenchmarkInternal
     ParkBench.Builder
     ParkBench.Named
     ParkBench.Numeric

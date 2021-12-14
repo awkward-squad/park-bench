@@ -1,40 +1,17 @@
 -- | This module contains helpers for benchmarking Haskell functions and IO actions.
 module ParkBench.Benchmark
-  ( function,
-    action,
+  ( whnf,
+    whnfIO,
     measure,
   )
 where
 
-import Control.Exception (evaluate)
 import qualified GHC.Stats as GHC
+import ParkBench.BenchmarkInternal (whnf, whnfIO)
 import ParkBench.Prelude
 import ParkBench.RtsStats
 import ParkBench.Statistics (Timed (..))
 import System.Mem (performGC)
-
-function :: (forall s. s -> a -> b) -> a -> Word64 -> IO (Timed RtsStats)
-function f x =
-  -- problem with `f x`: it could be let-floated
-  io \s -> evaluate (f s x)
--- prevent `function f x` from inlining, because if it, `io`, and `f` all get inlined, and `f` is `const` (it is), then
--- `f x` could ultimately be let-floated
-{-# NOINLINE function #-}
-
-action :: IO a -> Word64 -> IO (Timed RtsStats)
-action x =
-  io (const (x >>= evaluate))
-
-io :: (forall s. s -> IO a) -> Word64 -> IO (Timed RtsStats)
-io x =
-  measure . go
-  where
-    go :: Word64 -> IO ()
-    go = \case
-      0 -> pure ()
-      n -> do
-        _ <- x n
-        go (n -1)
 
 -- | Measure the time/memory usage of an IO action.
 measure :: IO () -> IO (Timed RtsStats)
