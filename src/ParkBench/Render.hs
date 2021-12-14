@@ -62,7 +62,7 @@ estimatesToRowGroups (summary0 :| summaries0) =
     RowGroup
       "Memory"
       [ render (R "Average residency" (Just . BytesCell . average_live_data . evalue)),
-        render (R "Max residency (total)" (Just . BytesCell . max_live_bytes . evalue)),
+        render (R "Max residency (all objects)" (Just . BytesCell . max_live_bytes . evalue)),
         render (R "Max residency (normal objects)" (Just . BytesCell . max_normal_objects_bytes . evalue)),
         render (R "Max residency (large objects)" (Just . BytesCell . max_large_objects_bytes . evalue)),
         render (R "Max residency (compact regions)" (Just . BytesCell . max_compact_bytes . evalue)),
@@ -70,7 +70,7 @@ estimatesToRowGroups (summary0 :| summaries0) =
         render (R "Allocated per second" (Just . BytesPerSecondCell . allocated_bytes_per_second . evalue)),
         render (R "Copied during GC" (Just . BytesCell . copied_bytes . evalue)),
         render (R "Copied during parallel GC" (Just . BytesCell . par_copied_bytes . evalue)),
-        render (R "Allocated from OS" (Just . BytesCell . max_mem_in_use_bytes . evalue)),
+        render (R "Allocated from OS by GHC" (Just . BytesCell . max_mem_in_use_bytes . evalue)),
         render (R "Wasted by GHC" (Just . BytesCell . max_slop_bytes . evalue))
       ],
     -- TODO nonmoving GC
@@ -91,4 +91,4 @@ estimatesToRowGroups (summary0 :| summaries0) =
       value . mean
     render :: forall a. Cellular a => R (Estimate RtsStats) a -> Row
     render =
-      maketh (summary0 :| summaries0)
+      rowMaker (summary0 :| summaries0)

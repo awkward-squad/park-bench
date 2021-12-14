@@ -10,16 +10,16 @@ module ParkBench.Pretty
     PercentageCell (..),
     PercentageCell' (..),
     SecondsCell (..),
-    maketh,
+    rowMaker,
 
     -- *
     Table (..),
+    renderTable,
     RowGroup (..),
     Row (..),
     Cell (..),
-    Color (..),
     isEmptyCell,
-    renderTable,
+    Color (..),
   )
 where
 
@@ -176,8 +176,8 @@ prettySeconds n0
     s = Builder.rational3 (n0 * 1_000_000_000)
 
 -- TODO rename
-maketh :: forall a. NonEmpty a -> (forall b. Cellular b => R a b -> Row)
-maketh (summary0 :| summaries0) (R name (f :: a -> Maybe b)) =
+rowMaker :: forall a. NonEmpty a -> (forall b. Cellular b => R a b -> Row)
+rowMaker (summary0 :| summaries0) (R name (f :: a -> Maybe b)) =
   if all isEmptyCell cols
     then EmptyRow
     else Row (name : cols)

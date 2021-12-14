@@ -17,8 +17,14 @@ timeit act = do
   s0 <- GHC.getRTSStats
   act
   s1 <- GHC.getRTSStats
-  performGC
-  s2 <- GHC.getRTSStats
+  -- Perform a major GC to update a few stats that are only accurate after a major GC.
+  -- But the latest GC before collecting `s1` might have happened to be major, so check that first.
+  s2 <-
+    if GHC.gcdetails_gen (GHC.gc s0) == GHC.gcdetails_gen (GHC.gc s1)
+      then pure s1
+      else do
+        performGC
+        GHC.getRTSStats
   let measure :: Integral a => (GHC.RTSStats -> a) -> Rational
       measure f =
         toRational (f s1 - f s0)
