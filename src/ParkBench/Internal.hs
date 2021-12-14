@@ -58,6 +58,7 @@ module ParkBench.Internal
 where
 
 import ParkBench.Benchmark
+import ParkBench.Driver
 import ParkBench.Pretty
 import ParkBench.RtsStats
 import ParkBench.Statistics

@@ -10,9 +10,11 @@ import Control.Concurrent (threadDelay)
 import qualified Data.ByteString as ByteString
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NonEmpty
-import qualified Data.Text.Encoding as Text
+import qualified Data.Text as Text (pack)
+import qualified Data.Text.Encoding as Text (encodeUtf8)
 import qualified ParkBench.Benchmark as Benchmark
 import qualified ParkBench.Builder as Builder
+import qualified ParkBench.Driver as Driver
 import ParkBench.Named (Named (Named))
 import qualified ParkBench.Named as Named
 import ParkBench.Prelude
@@ -22,7 +24,7 @@ import ParkBench.RtsStats (RtsStats)
 import qualified ParkBench.Statistics as Statistics
 import ParkBench.Terminal (clearFromCursor, cursorUp, withTerminal)
 
--- | A benchmark.
+-- | A single benchmark.
 newtype Benchmark
   = Benchmark (Named (Word64 -> IO ()))
 
@@ -39,53 +41,45 @@ benchmark xs =
 benchmark' :: NonEmpty (Named (Word64 -> IO ())) -> IO void
 benchmark' fs =
   withTerminal do
-    summaries0 <- (traverse . traverse) (\f -> Statistics.benchmark (Benchmark.measure . f)) fs
-    let pulls :: NonEmpty (Statistics.Pull RtsStats)
-        pulls =
-          snd . Named.thing <$> summaries0
-    let getSummaries :: IO (NonEmpty (Named (Statistics.Estimate RtsStats)))
-        getSummaries =
-          traverse (traverse fst) summaries0
-    let renderSummaries :: NonEmpty (Named (Statistics.Estimate RtsStats)) -> Int -> IO Int
-        renderSummaries summaries newlines0 = do
-          ByteString.putStr bytes
-          pure (ByteString.count 10 bytes)
-          where
-            bytes =
-              Text.encodeUtf8
-                ( Builder.build
-                    ( cursorUp newlines0
-                        <> clearFromCursor
-                        <> renderTable (estimatesToTable summaries)
-                    )
-                )
-    let loop :: NonEmpty (Statistics.Pull RtsStats) -> Int -> IO void
-        loop ps0 newlines0 = do
-          summaries <- getSummaries
+    summaries0 <- (traverse . traverse) (\f -> Driver.benchmark (Benchmark.measure . f)) fs
+    let loop :: NonEmpty (Driver.Pull RtsStats) -> Int -> IO void
+        loop pulls0 newlines0 = do
+          summaries <- traverse (traverse fst) summaries0
           newlines1 <- renderSummaries summaries newlines0
-          ps1 <- Statistics.pull ps0
-          loop ps1 newlines1
-    ByteString.putStr (ByteString.singleton 10)
-    loop pulls 0
+          pulls1 <- Driver.pull pulls0
+          loop pulls1 newlines1
+    ByteString.putStr (ByteString.singleton newline)
+    loop (snd . Named.thing <$> summaries0) 0
+
+renderSummaries :: NonEmpty (Named (Statistics.Estimate RtsStats)) -> Int -> IO Int
+renderSummaries summaries newlines0 = do
+  ByteString.putStr bytes
+  pure (ByteString.count newline bytes)
+  where
+    bytes = Text.encodeUtf8 (Builder.build builder)
+    builder = cursorUp newlines0 <> clearFromCursor <> renderTable (estimatesToTable summaries)
+
+newline :: Word8
+newline = 10
 
 -- | Benchmark a function. The result is evaluated to weak head normal form.
 function ::
   -- |
-  Text ->
+  String ->
   -- |
   (a -> b) ->
   -- |
   a ->
   Benchmark
 function name f x =
-  Benchmark (Named name (Benchmark.whnf f x))
+  Benchmark (Named (Text.pack name) (Benchmark.whnf f x))
 
 -- | Benchmark an IO action. The result is evaluated to weak head normal form.
 action ::
   -- |
-  Text ->
+  String ->
   -- |
   IO a ->
   Benchmark
 action name x =
-  Benchmark (Named name (Benchmark.whnfIO x))
+  Benchmark (Named (Text.pack name) (Benchmark.whnfIO x))

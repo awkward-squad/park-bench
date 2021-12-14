@@ -1,3 +1,4 @@
+-- | Text builder helpers.
 module ParkBench.Builder
   ( Builder,
     build,

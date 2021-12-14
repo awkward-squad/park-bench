@@ -1,3 +1,4 @@
+-- | RTS stats type.
 module ParkBench.RtsStats
   ( RtsStats (..),
     allocated_bytes_per_second,
@@ -13,7 +14,6 @@ module ParkBench.RtsStats
   )
 where
 
-import ParkBench.Numeric (divide, divide')
 import ParkBench.Prelude
 import ParkBench.Statistics
 

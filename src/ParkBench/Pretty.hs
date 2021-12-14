@@ -1,3 +1,4 @@
+-- | Generic-ish (not really) pretty-printing utilities and abstractions for rendering the table of cells.
 module ParkBench.Pretty
   ( -- * High-level row/cell machinery
     R (..),
@@ -31,7 +32,6 @@ import Data.String (IsString (..))
 import qualified Data.Text as Text
 import ParkBench.Builder (Builder)
 import qualified ParkBench.Builder as Builder
-import ParkBench.Numeric (divide)
 import ParkBench.Prelude
 import qualified ParkBench.Terminal as Terminal
 

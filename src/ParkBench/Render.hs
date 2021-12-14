@@ -1,3 +1,4 @@
+-- | Rendering code that takes lays out raw benchmarking results in a table.
 module ParkBench.Render
   ( estimatesToTable,
   )

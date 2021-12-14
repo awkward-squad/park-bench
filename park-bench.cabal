@@ -78,7 +78,7 @@ common component
 
 library
   import: component
-  build-depends: 
+  build-depends:
     bytestring,
     text,
   exposed-modules:
@@ -89,8 +89,8 @@ library
     ParkBench.Benchmark
     ParkBench.BenchmarkInternal
     ParkBench.Builder
+    ParkBench.Driver
     ParkBench.Named
-    ParkBench.Numeric
     ParkBench.Prelude
     ParkBench.Pretty
     ParkBench.Render
