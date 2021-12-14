@@ -29,7 +29,7 @@ estimatesToHeader (NonEmpty.toList -> names) =
         EmptyCell :
         Append
           (Cell Blue (Text.map dash (Named.name x)))
-          (Cell White (Builder.build ("⧸" <> Builder.decimal (samples (Named.thing x))))) :
+          (Cell White (Builder.build (Builder.c '/' <> Builder.decimal (samples (Named.thing x))))) :
         go xs
 
     dash :: Char -> Char

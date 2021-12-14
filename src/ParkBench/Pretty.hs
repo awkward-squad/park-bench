@@ -279,18 +279,6 @@ renderTable (Table labels rowGroups) =
         <> ((map (renderCell AlignLeft '─') (zip (map (+ 2) widths) labels)) `Builder.sepBy` Builder.c '┬')
         <> Builder.c '┐'
 
-    line :: Text -> Builder
-    line label =
-      Builder.c '├'
-        <> "\ESC[1m\ESC[4m\ESC[97m"
-        <> Builder.t label
-        <> "\ESC[39m\ESC[24m\ESC[22m"
-        <> Builder.cs (head widths + 2 - Text.length label) '─'
-        <> foldMap
-          (\n -> Builder.c '┼' <> Builder.cs (n + 2) '─')
-          (tail widths)
-        <> Builder.c '┤'
-
     footer :: Builder
     footer =
       Builder.c '└'
@@ -301,7 +289,16 @@ renderTable (Table labels rowGroups) =
     renderRowGroup (RowGroup label rows) =
       case mapMaybe renderRow rows of
         [] -> Nothing
-        s -> Just ((line label : s) `Builder.sepBy` Builder.c '\n')
+        s -> Just ((line : s) `Builder.sepBy` Builder.c '\n')
+      where
+        line =
+          Builder.c '├'
+            <> "\ESC[1m\ESC[4m\ESC[97m"
+            <> Builder.t label
+            <> "\ESC[39m\ESC[24m\ESC[22m"
+            <> Builder.cs (head widths + 2 - Text.length label) '─'
+            <> foldMap (\n -> Builder.c '┼' <> Builder.cs (n + 2) '─') (tail widths)
+            <> Builder.c '┤'
 
     renderRow :: Row -> Maybe Builder
     renderRow = \case
@@ -318,16 +315,14 @@ renderTable (Table labels rowGroups) =
 
     widths :: [Int]
     widths =
-      foldl'
-        ( \acc (RowGroup label rows) ->
-            foldl'
-              ( \acc2 -> \case
-                  Row [] -> error "empty row"
-                  Row (col : cols) -> zipWith max (max (Text.length label) (cellWidth col) : map cellWidth cols) acc2
-                  EmptyRow -> acc2
-              )
-              acc
-              rows
-        )
-        (map (subtract 1 . cellWidth) labels)
-        rowGroups
+      foldl' step0 (map (subtract 1 . cellWidth) labels) rowGroups
+      where
+        step0 :: [Int] -> RowGroup -> [Int]
+        step0 acc (RowGroup label rows) =
+          foldl' (step1 label) acc rows
+
+        step1 :: Text -> [Int] -> Row -> [Int]
+        step1 label acc = \case
+          Row [] -> error "empty row"
+          Row (col : cols) -> zipWith max (max (Text.length label) (cellWidth col) : map cellWidth cols) acc
+          EmptyRow -> acc

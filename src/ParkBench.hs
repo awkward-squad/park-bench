@@ -65,6 +65,7 @@ benchmark' xs =
           newlines1 <- renderSummaries summaries newlines0
           ps1 <- Statistics.pull ps0
           loop ps1 newlines1
+    ByteString.putStr (ByteString.singleton 10)
     loop pulls 0
 
 -- | Benchmark a function. The result is evaluated to weak head normal form.
