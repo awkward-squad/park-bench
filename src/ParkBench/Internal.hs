@@ -2,6 +2,8 @@ module ParkBench.Internal
   ( -- * Benchmarking
     benchmark,
     Pull,
+    Pulls,
+    pulls,
     pull,
 
     -- ** Low-level

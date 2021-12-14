@@ -1,6 +1,8 @@
 module ParkBench.Driver
   ( benchmark,
     Pull,
+    Pulls,
+    pulls,
     pull,
   )
 where
@@ -39,23 +41,64 @@ data Pull a
   = Pull
       -- amount of time this pull has gotten
       {-# UNPACK #-} !Rational
-      (IO (Pull a))
+      !(IO (Pull a))
 
-pull :: NonEmpty (Pull a) -> IO (NonEmpty (Pull a))
-pull (Pull _ p0 :| ps) = do
-  p1 <- p0
-  pure (insertPull p1 ps)
+isMoreUrgentThan :: Pull a -> Pull a -> Bool
+Pull t0 _ `isMoreUrgentThan` Pull t1 _ =
+  t0 < t1
 
--- Insert a pull into an ordered list of pulls, maintaining the invariant that the pull most in need of being run next
--- is first in the list.
-insertPull :: Pull a -> [Pull a] -> NonEmpty (Pull a)
-insertPull p ps =
-  NonEmpty.fromList (insertPull' p ps)
+-- | An array of 'Pull', one per benchmark, in decreasing urgency order.
+data Pulls a
+  = P1 !(Pull a)
+  | P2 !(Pull a) !(Pull a)
+  | P3 !(Pull a) !(Pull a) !(Pull a)
+  | Pn_ ![Pull a] -- invariant: 4+ elements
 
-insertPull' :: Pull a -> [Pull a] -> [Pull a]
-insertPull' p0@(Pull t0 _) = \case
+pattern Pn :: Pull a -> [Pull a] -> Pulls a
+pattern Pn p ps <- Pn_ (p : ps)
+
+{-# COMPLETE P1, P2, P3, Pn #-}
+
+-- | Construct a 'Pulls' from a non-empty list of 'Pull'.
+pulls :: NonEmpty (Pull a) -> Pulls a
+pulls =
+  pulls' . NonEmpty.sortWith \(Pull t _) -> t
+
+pulls' :: NonEmpty (Pull a) -> Pulls a
+pulls' = \case
+  a :| [] -> P1 a
+  a :| [b] -> P2 a b
+  a :| [b, c] -> P3 a b c
+  a :| as -> Pn_ (a : as)
+
+pull :: Pulls a -> IO (Pulls a)
+pull = \case
+  P1 (Pull _ p0) -> do
+    p <- p0
+    pure (P1 p)
+  P2 (Pull _ p0) q -> do
+    p <- p0
+    pure
+      if q `isMoreUrgentThan` p
+        then P2 q p
+        else P2 p q
+  P3 (Pull _ p0) q r -> do
+    p <- p0
+    pure
+      if q `isMoreUrgentThan` p
+        then
+          if r `isMoreUrgentThan` p
+            then P3 q r p
+            else P3 q p r
+        else P3 p q r
+  Pn (Pull _ p0) ps -> do
+    p <- p0
+    pure (Pn_ (insertPull p ps))
+
+insertPull :: Pull a -> [Pull a] -> [Pull a]
+insertPull p0 = \case
   [] -> [p0]
-  p1@(Pull t1 _) : ps ->
-    if t0 < t1
+  p1 : ps ->
+    if p0 `isMoreUrgentThan` p1
       then p0 : p1 : ps
-      else p1 : insertPull' p0 ps
+      else p1 : insertPull p0 ps

@@ -42,14 +42,14 @@ benchmark' :: NonEmpty (Named (Word64 -> IO ())) -> IO void
 benchmark' fs =
   withTerminal do
     summaries0 <- (traverse . traverse) (\f -> Driver.benchmark (Benchmark.measure . f)) fs
-    let loop :: NonEmpty (Driver.Pull RtsStats) -> Int -> IO void
+    let loop :: Driver.Pulls RtsStats -> Int -> IO void
         loop pulls0 newlines0 = do
           summaries <- traverse (traverse fst) summaries0
           newlines1 <- renderSummaries summaries newlines0
           pulls1 <- Driver.pull pulls0
           loop pulls1 newlines1
     ByteString.putStr (ByteString.singleton newline)
-    loop (snd . Named.thing <$> summaries0) 0
+    loop (Driver.pulls (snd . Named.thing <$> summaries0)) 0
 
 renderSummaries :: NonEmpty (Named (Statistics.Estimate RtsStats)) -> Int -> IO Int
 renderSummaries summaries newlines0 = do
