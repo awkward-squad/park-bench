@@ -293,12 +293,17 @@ renderTable (Table labels rowGroups) =
       where
         line =
           Builder.c '├'
-            <> "\ESC[1m\ESC[4m\ESC[97m"
-            <> Builder.t label
-            <> "\ESC[39m\ESC[24m\ESC[22m"
+            <> "\ESC[1m\ESC[97m"
+            <> Builder.t (Text.map dash label)
+            <> "\ESC[39m\ESC[22m"
             <> Builder.cs (head widths + 2 - Text.length label) '─'
             <> foldMap (\n -> Builder.c '┼' <> Builder.cs (n + 2) '─') (tail widths)
             <> Builder.c '┤'
+
+        dash :: Char -> Char
+        dash = \case
+          ' ' -> '─'
+          c -> c
 
     renderRow :: Row -> Maybe Builder
     renderRow = \case
