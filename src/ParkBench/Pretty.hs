@@ -145,7 +145,7 @@ prettyPercentage :: Rational -> Builder
 prettyPercentage n =
   if Builder.null s
     then ""
-    else s <> "٪"
+    else s <> "%"
   where
     s = Builder.rational3 (n * 100)
 
