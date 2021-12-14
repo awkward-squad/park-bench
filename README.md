@@ -39,12 +39,17 @@ main =
 
 Next, I'm going to construct a build environment in which `ghc` can be run at the command-line to compile `Bench.hs`.
 
-Some days, `cabal` feels up to the task. First I'm going to build my package, then use `cabal exec` to enter a shell
-environment with `math-utilities` in scope for GHC.
+Some days, `cabal`/`stack` feel up to the task. First I'm going to build my `math-utilities` package, then use enter a
+shell environment with `math-utilities` in scope for GHC.
 
 ```
-> cabal build
-> cabal exec -- ghc -O1 -rtsopts -with-rtsopts=-T Bench.hs
+cabal build
+cabal exec -- ghc -O1 -rtsopts -with-rtsopts=-T Bench.hs
+```
+
+```
+stack build
+stack exec -- ghc -O1 -rtsopts -with-rtsopts=-T Bench.hs
 ```
 
 ## Step 4: Run the benchmark
@@ -52,7 +57,7 @@ environment with `math-utilities` in scope for GHC.
 If all goes well, I'll have an executable to run.
 
 ```
-> ./Bench
+./Bench
 ```
 
 # Caveats
