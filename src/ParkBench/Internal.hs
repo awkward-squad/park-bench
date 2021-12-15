@@ -40,12 +40,12 @@ module ParkBench.Internal
     Cellular (..),
     BytesCell (..),
     BytesPerSecondCell (..),
-    EstSecondsCell (..),
+    EstNanosecondsCell (..),
+    NanosecondsCell(..),
     NumberCell (..),
     NumberCell' (..),
     PercentageCell (..),
     PercentageCell' (..),
-    SecondsCell (..),
     rowMaker,
 
     -- ** Table machinery

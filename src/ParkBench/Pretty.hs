@@ -5,12 +5,12 @@ module ParkBench.Pretty
     Cellular (..),
     BytesCell (..),
     BytesPerSecondCell (..),
-    EstSecondsCell (..),
+    EstNanosecondsCell (..),
+    NanosecondsCell (..),
     NumberCell (..),
     NumberCell' (..),
     PercentageCell (..),
     PercentageCell' (..),
-    SecondsCell (..),
     rowMaker,
 
     -- *
@@ -51,16 +51,8 @@ newtype BytesCell
   deriving (Ord) via Down Rational
 
 instance Cellular BytesCell where
-  cellString (BytesCell r) = prettyBytes r
+  cellString (BytesCell r) = Builder.bytes4 r
   cellValue = coerce
-
-prettyBytes :: Rational -> Builder
-prettyBytes n0
-  | n1 <- n0 / 1_000_000_000, n1 >= 1 = Builder.rational3 n1 <> " gb"
-  | n1 <- n0 / 1_000_000, n1 >= 1 = Builder.rational3 n1 <> " mb"
-  | n1 <- n0 / 1_000, n1 >= 1 = Builder.rational3 n1 <> " kb"
-  | n0 >= 0.5 = Builder.rational3 n0 <> " b"
-  | otherwise = ""
 
 newtype BytesPerSecondCell
   = BytesPerSecondCell Rational
@@ -74,10 +66,10 @@ instance Cellular BytesPerSecondCell where
 prettyBytesPerSecond :: Rational -> Builder
 prettyBytesPerSecond r =
   if Builder.null s
-    then ""
+    then Builder.empty
     else s <> "/s"
   where
-    s = prettyBytes r
+    s = Builder.bytes4 r
 
 newtype NumberCell
   = NumberCell Rational
@@ -85,7 +77,7 @@ newtype NumberCell
   deriving (Ord) via Down Rational
 
 instance Cellular NumberCell where
-  cellString (NumberCell r) = Builder.rational3 r
+  cellString (NumberCell r) = Builder.rational4 r
   cellValue = coerce
 
 newtype NumberCell'
@@ -93,30 +85,39 @@ newtype NumberCell'
   deriving (Eq, Ord) via Rational
   deriving (Cellular) via NumberCell
 
-data EstSecondsCell
-  = EstSecondsCell
+data EstNanosecondsCell
+  = EstNanosecondsCell
       -- mean
       {-# UNPACK #-} !Rational
       -- standard deviation
       {-# UNPACK #-} !Double
 
-instance Eq EstSecondsCell where
-  EstSecondsCell x _ == EstSecondsCell y _ = x == y
+instance Eq EstNanosecondsCell where
+  EstNanosecondsCell x _ == EstNanosecondsCell y _ = x == y
 
-instance Ord EstSecondsCell where
-  compare (EstSecondsCell x _) (EstSecondsCell y _) = compare y x
+instance Ord EstNanosecondsCell where
+  compare (EstNanosecondsCell x _) (EstNanosecondsCell y _) = compare y x
 
-instance Cellular EstSecondsCell where
-  cellString (EstSecondsCell x y) = prettyEstSeconds x y
-  cellValue (EstSecondsCell x _) = x
+instance Cellular EstNanosecondsCell where
+  cellString (EstNanosecondsCell x y) = prettyEstNanoseconds x y
+  cellValue (EstNanosecondsCell x _) = x
 
-prettyEstSeconds :: Rational -> Double -> Builder
-prettyEstSeconds n m =
+prettyEstNanoseconds :: Rational -> Double -> Builder
+prettyEstNanoseconds n m =
   if Builder.null m'
-    then prettySeconds n
-    else prettySeconds n <> " ± " <> m'
+    then Builder.nanos4 n
+    else Builder.nanos4 n <> " ±" <> m'
   where
-    m' = prettySeconds (2 * (approxRational m (1 / 1_000_000_000)))
+    m' = Builder.nanos3 (2 * (approxRational m (1 / 1_000_000_000)))
+
+newtype NanosecondsCell
+  = NanosecondsCell Rational
+  deriving (Eq) via Rational
+  deriving (Ord) via Down Rational
+
+instance Cellular NanosecondsCell where
+  cellString (NanosecondsCell r) = Builder.nanos4 r
+  cellValue = coerce
 
 newtype PercentageCell
   = PercentageCell Rational
@@ -124,58 +125,20 @@ newtype PercentageCell
   deriving (Ord) via Down Rational
 
 instance Cellular PercentageCell where
-  cellString (PercentageCell r) = prettyPercentage r
+  cellString (PercentageCell r) = Builder.percentage r
   cellValue = coerce
 
 prettyDelta :: Rational -> Builder
 prettyDelta n
-  | n >= 1 =
-    let s = Builder.rational3 (n + 1)
-     in if Builder.null s
-          then ""
-          else s <> "x"
-  | n <= -0.5 =
-    let s = Builder.rational3 (-1 `divide` (n + 1))
-     in if Builder.null s
-          then ""
-          else s <> "x"
-  | otherwise = prettyPercentage n
-
-prettyPercentage :: Rational -> Builder
-prettyPercentage n =
-  if Builder.null s
-    then ""
-    else s <> "%"
-  where
-    s = Builder.rational3 (n * 100)
+  | n >= 1 = Builder.multiplier (n + 1)
+  | n <= -0.5 = Builder.multiplier (-1 `divide` (n + 1))
+  | otherwise = Builder.percentage n
 
 newtype PercentageCell'
   = PercentageCell' Rational
   deriving (Eq, Ord) via Rational
   deriving (Cellular) via PercentageCell
 
-newtype SecondsCell
-  = SecondsCell Rational
-  deriving (Eq) via Rational
-  deriving (Ord) via Down Rational
-
-instance Cellular SecondsCell where
-  cellString (SecondsCell r) = prettySeconds r
-  cellValue = coerce
-
-prettySeconds :: Rational -> Builder
-prettySeconds n0
-  | n0 >= 1 = Builder.rational3 n0 <> " s"
-  | n1 <- n0 * 1_000, n1 >= 1 = Builder.rational3 n1 <> " ms"
-  | n1 <- n0 * 1_000_000, n1 >= 1 = Builder.rational3 n1 <> " µs"
-  | otherwise =
-    if Builder.null s
-      then ""
-      else s <> " ns"
-  where
-    s = Builder.rational3 (n0 * 1_000_000_000)
-
--- TODO rename
 rowMaker :: forall a. NonEmpty a -> (forall b. Cellular b => R a b -> Row)
 rowMaker (summary0 :| summaries0) (R name (f :: a -> Maybe b)) =
   if all isEmptyCell cols

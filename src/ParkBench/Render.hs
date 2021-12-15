@@ -42,22 +42,18 @@ estimatesToRowGroups :: NonEmpty (Estimate RtsStats) -> [RowGroup]
 estimatesToRowGroups (summary0 :| summaries0) =
   [ RowGroup
       "Elapsed time"
-      [ render
-          ( R
-              "Total"
-              (\e -> Just (EstSecondsCell (nanoseconds (mean e) / 1_000_000_000) (stdev e / 1_000_000_000)))
-          ),
-        render (R "Mutator" (Just . SecondsCell . (/ 1_000_000_000) . mutator_elapsed_ns . evalue)),
+      [ render (R "Total" (\e -> Just (EstNanosecondsCell (nanoseconds (mean e)) (stdev e)))),
+        render (R "Mutator" (Just . NanosecondsCell . mutator_elapsed_ns . evalue)),
         render (R "Mutator %" (Just . PercentageCell' . mut_wall_percent . evalue)),
-        render (R "Garbage collector" (Just . SecondsCell . (/ 1_000_000_000) . gc_elapsed_ns . evalue)),
+        render (R "Garbage collector" (Just . NanosecondsCell . gc_elapsed_ns . evalue)),
         render (R "Garbage collector %" (Just . PercentageCell . gc_wall_percent . evalue))
       ],
     RowGroup
       "CPU time"
-      [ render (R "Total" (Just . SecondsCell . (/ 1_000_000_000) . cpu_ns . evalue)),
-        render (R "Mutator" (Just . SecondsCell . (/ 1_000_000_000) . mutator_cpu_ns . evalue)),
+      [ render (R "Total" (Just . NanosecondsCell . cpu_ns . evalue)),
+        render (R "Mutator" (Just . NanosecondsCell . mutator_cpu_ns . evalue)),
         render (R "Mutator %" (Just . PercentageCell' . mut_cpu_percent . evalue)),
-        render (R "Garbage collector" (Just . SecondsCell . (/ 1_000_000_000) . gc_cpu_ns . evalue)),
+        render (R "Garbage collector" (Just . NanosecondsCell . gc_cpu_ns . evalue)),
         render (R "Garbage collector %" (Just . PercentageCell . gc_cpu_percent . evalue))
       ],
     RowGroup
@@ -80,9 +76,9 @@ estimatesToRowGroups (summary0 :| summaries0) =
       [ render (R "Collections (total)" (Just . NumberCell . gcs . evalue)),
         render (R "Collections (minor)" (Just . NumberCell . minor_gcs . evalue)),
         render (R "Collections (major)" (Just . NumberCell . major_gcs . evalue)),
-        render (R "Total elapsed time" (Just . SecondsCell . (/ 1_000_000_000) . gc_elapsed_ns . evalue)),
-        render (R "Total CPU time" (Just . SecondsCell . (/ 1_000_000_000) . gc_cpu_ns . evalue)),
-        render (R "Average elapsed time" (Just . SecondsCell . (/ 1_000_000_000) . gc_average_ns . evalue)),
+        render (R "Total elapsed time" (Just . NanosecondsCell . gc_elapsed_ns . evalue)),
+        render (R "Total CPU time" (Just . NanosecondsCell . gc_cpu_ns . evalue)),
+        render (R "Average elapsed time" (Just . NanosecondsCell . gc_average_ns . evalue)),
         render (R "Parallel work balance" (fmap PercentageCell' . work_balance . evalue))
       ]
   ]
