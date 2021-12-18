@@ -44,21 +44,21 @@ estimatesToRowGroups (summary0 :| summaries0) =
       [ render (R "Total" (Just . NanosecondsCell . r2d . nanoseconds . mean)),
         render (R "Mutator" (Just . NanosecondsCell . r2d . mutator_elapsed_ns . value . mean)),
         render (R "Mutator %" (Just . PercentageCell' . r2d . mut_wall_percent . value . mean)),
-        render (R "GC" (Just . NanosecondsCell . r2d . gc_elapsed_ns . value . mean)),
-        render (R "GC %" (Just . PercentageCell . r2d . gc_wall_percent . value . mean))
+        render (R "Garbage collector" (Just . NanosecondsCell . r2d . gc_elapsed_ns . value . mean)),
+        render (R "Garbage collector %" (Just . PercentageCell . r2d . gc_wall_percent . value . mean))
       ],
     RowGroup
       "CPU time"
       [ render (R "Total" (Just . NanosecondsCell . r2d . cpu_ns . value . mean)),
         render (R "Mutator" (Just . NanosecondsCell . r2d . mutator_cpu_ns . value . mean)),
         render (R "Mutator %" (Just . PercentageCell' . r2d . mut_cpu_percent . value . mean)),
-        render (R "GC" (Just . NanosecondsCell . r2d . gc_cpu_ns . value . mean)),
-        render (R "GC %" (Just . PercentageCell . r2d . gc_cpu_percent . value . mean))
+        render (R "Garbage collector" (Just . NanosecondsCell . r2d . gc_cpu_ns . value . mean)),
+        render (R "Garbage collector %" (Just . PercentageCell . r2d . gc_cpu_percent . value . mean))
       ],
     RowGroup
       "Memory usage"
-      [ render (R "Avg" (Just . BytesCell . r2d . average_live_data . value . mean)),
-        render (R "Max" (Just . BytesCell . r2d . max_live_bytes . value . mean))
+      [ render (R "Average" (Just . BytesCell . r2d . average_live_data . value . mean)),
+        render (R "Maximum" (Just . BytesCell . r2d . max_live_bytes . value . mean))
       ],
     RowGroup
       "Memory pressure"
@@ -71,7 +71,7 @@ estimatesToRowGroups (summary0 :| summaries0) =
       "Garbage collection"
       [ render (R "Total collections" (Just . NumberCell . r2d . gcs . value . mean)),
         render (R "Major collections" (Just . NumberCell . r2d . major_gcs . value . mean)),
-        render (R "Avg elapsed time" (Just . NanosecondsCell . r2d . gc_average_ns . value . mean)),
+        render (R "Average pause" (Just . NanosecondsCell . r2d . gc_average_ns . value . mean)),
         render (R "Work balance" (fmap (PercentageCell' . r2d) . work_balance . value . mean))
       ]
   ]
