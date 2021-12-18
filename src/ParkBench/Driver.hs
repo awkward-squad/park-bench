@@ -1,5 +1,7 @@
 module ParkBench.Driver
-  ( benchmark,
+  ( benchmark1,
+    Pull1 (..),
+    benchmark,
     Pull,
     Pulls,
     pulls,
@@ -14,28 +16,50 @@ import ParkBench.Prelude
 import ParkBench.RtsStats (RtsStats)
 import ParkBench.Statistics
 
+newtype Pull1 a
+  = Pull1 (IO (Estimate a, Pull1 a))
+
+-- | Like 'benchmark', but optimized for only running one benchmark.
+benchmark1 :: forall a. Roll a => (Word64 -> IO (Timed a)) -> Pull1 a
+benchmark1 run =
+  Pull1 do
+    t <- run 1
+    let another :: Estimate a -> Pull1 a
+        another e0 =
+          Pull1 do
+            t2 <- run n
+            pure (andAnother (updateEstimate n t2 e0))
+          where
+            n = next e0
+        andAnother :: Estimate a -> (Estimate a, Pull1 a)
+        andAnother e =
+          (e, another e)
+    pure (andAnother (initialEstimate t))
+{-# SPECIALIZE benchmark1 :: (Word64 -> IO (Timed RtsStats)) -> Pull1 RtsStats #-}
+
 benchmark :: forall a. Roll a => (Word64 -> IO (Timed a)) -> IO (IO (Estimate a), Pull a)
 benchmark run = do
   t <- run 1
   let e = initialEstimate t
   ref <- newIORef e
-
   let another :: Estimate a -> IO (Pull a)
       another e0 = do
         t2 <- run n
         let !e1 = updateEstimate n t2 e0
         writeIORef ref e1
-        pure (Pull (w2r (samples e1) * nanoseconds (mean e1)) (another e1))
+        pure (andAnother e1)
         where
           n = next e0
-
-  pure (readIORef ref, Pull (nanoseconds (mean e)) (another e))
-  where
-    -- target runs that take 0.1 seconds (e.g. 500_000_000 would be 0.5 seconds)
-    next :: Estimate a -> Word64
-    next Estimate {mean = Timed nanoseconds _, samples} =
-      max 1 (min samples (floor (100_000_000 / nanoseconds)))
+      andAnother :: Estimate a -> Pull a
+      andAnother e0 =
+        Pull (w2r (samples e0) * nanoseconds (mean e0)) (another e0)
+  pure (readIORef ref, andAnother e)
 {-# SPECIALIZE benchmark :: (Word64 -> IO (Timed RtsStats)) -> IO (IO (Estimate RtsStats), Pull RtsStats) #-}
+
+-- target runs that take 0.1 seconds (e.g. 500_000_000 would be 0.5 seconds)
+next :: Estimate a -> Word64
+next Estimate {mean = Timed nanoseconds _, samples} =
+  max 1 (min samples (floor (100_000_000 / nanoseconds)))
 
 data Pull a
   = Pull

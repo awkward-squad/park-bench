@@ -39,17 +39,27 @@ benchmark xs =
     Just ys -> benchmark' (coerce ys)
 
 benchmark' :: NonEmpty (Named (Word64 -> IO ())) -> IO void
-benchmark' fs =
-  withTerminal do
-    summaries0 <- (traverse . traverse) (\f -> Driver.benchmark (Benchmark.measure . f)) fs
-    let loop :: Driver.Pulls RtsStats -> Int -> IO void
-        loop pulls0 newlines0 = do
-          summaries <- traverse (traverse fst) summaries0
-          newlines1 <- renderSummaries summaries newlines0
-          pulls1 <- Driver.pull pulls0
-          loop pulls1 newlines1
-    ByteString.putStr (ByteString.singleton newline)
-    loop (Driver.pulls (snd . Named.thing <$> summaries0)) 0
+benchmark' = \case
+  Named name f :| [] ->
+    withTerminal do
+      let loop :: Driver.Pull1 RtsStats -> Int -> IO void
+          loop (Driver.Pull1 pull0) newlines0 = do
+            (estimate, pull1) <- pull0
+            newlines1 <- renderSummaries (Named name estimate :| []) newlines0
+            loop pull1 newlines1
+      ByteString.putStr (ByteString.singleton newline)
+      loop (Driver.benchmark1 (Benchmark.measure . f)) 0
+  fs ->
+    withTerminal do
+      summaries0 <- (traverse . traverse) (\f -> Driver.benchmark (Benchmark.measure . f)) fs
+      let loop :: Driver.Pulls RtsStats -> Int -> IO void
+          loop pulls0 newlines0 = do
+            summaries <- traverse (traverse fst) summaries0
+            newlines1 <- renderSummaries summaries newlines0
+            pulls1 <- Driver.pull pulls0
+            loop pulls1 newlines1
+      ByteString.putStr (ByteString.singleton newline)
+      loop (Driver.pulls (snd . Named.thing <$> summaries0)) 0
 
 renderSummaries :: NonEmpty (Named (Statistics.Estimate RtsStats)) -> Int -> IO Int
 renderSummaries summaries newlines0 = do

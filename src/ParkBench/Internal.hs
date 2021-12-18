@@ -1,5 +1,7 @@
 module ParkBench.Internal
   ( -- * Benchmarking
+    benchmark1,
+    Pull1 (..),
     benchmark,
     Pull,
     Pulls,
