@@ -6,30 +6,30 @@ performance impact with as little friction as possible.
 
 # Example usage
 
-Say I am interested in improving the performance of `fib`, which is a function defined in module `Fib` in a local
-package called `math-utilities`.
+Say I am interested in improving the performance of `fib`, which is a function defined in module `MyMathUtilities.Fib`
+in a local package called `my-math-utilities`.
 
 ## Step 1: Write the function you'd like to benchmark
 
 First, I'm going to copy the implementation of `fib` to a new top-level definition called `fastfib`, tweak its
-implementation, and export both from module `Fib`.
+implementation, and export both from module `MyMathUtilities.Fib`.
 
 If `fib` was private before, that's ok. We only need to expose it for as long as we are interested in benchmarking.
 
 ```haskell
-module Fib (fib, fastfib, ...) where
+module MyMathUtilities.Fib (fib, fastfib, ...) where
 ```
 
-## Step 2: Write a standalone `Bench.hs` module with a `main` function
+## Step 2: Write a standalone `bench/Main.hs` module with a `main` function
 
-Next, I'm going to write a standalone `Bench.hs`, outside of my local project, which will be compiled to an executable
-that runs my benchmark.
+Next, I'm going to write a standalone `Main.hs` in a subdirectory called `bench`, which will be compiled to an
+executable that runs my benchmark.
 
 ```haskell
-module Bench where
+module Main where
 
--- The code in my local package that I want to benchmark
-import Fib
+-- The module in my local package that I want to benchmark
+import MyMathUtilities.Fib
 
 -- This library
 import ParkBench
@@ -42,40 +42,54 @@ main =
     ]
 ```
 
-## Step 3: Construct an build environment
+## Step 3: Define an executable component
 
-Next, I'm going to construct a build environment in which `ghc` can be run at the command-line to compile `Bench.hs`.
+Next, I'm going to define an executable component for my benchmark in my `my-math-utilities.cabal` file.
 
-Some days, `cabal`/`stack` feel up to the challenge. First I'm going to build my `math-utilities` package, then enter a
-shell environment with `math-utilities` in scope for GHC.
-
+```cabal
+executable bench
+  build-depends:
+    base,
+    -- The local package that I want to benchmark
+    my-math-utilities,
+    -- This library
+    park-bench
+  default-language: Haskell2010
+  ghc-options: -O -rtsopts -with-rtsopts=-T
+  hs-source-dirs: bench
+  main-is: Main.hs
 ```
-cabal build && cabal exec -- ghc -O -rtsopts -with-rtsopts=-T Bench.hs
-```
 
-```
-stack build && stack exec -- ghc -O -rtsopts -with-rtsopts=-T Bench.hs
-```
-
-I needed to compile the benchmark with `-rtsopts -with-rtsopts=-T`, otherwise my benchmark will not be able to get RTS
+I need to compile the benchmark with `-rtsopts -with-rtsopts=-T`, otherwise my benchmark will not be able to get RTS
 statistics from GHC at runtime.
 
-Alternatively, I could have just compiled the benchmark with `-rtsopts`, but then I'll have to provide `+RTS -T` to the
+Alternatively, I could compile the benchmark with only `-rtsopts`, but then I'll have to provide `+RTS -T` to the
 executable later.
 
 ## Step 4: Run the benchmark
 
-If all goes well, I'll have an executable to run.
+If all goes well, I'll have an executable component to run.
 
 ```
-./Bench
+cabal run my-math-utilities:exe:bench
+```
+```
+stack run my-math-utilities:exe:bench
 ```
 
 Or, if I only compiled with `-rtsopts`, but not `-with-rtsopts=-T`,
 
 ```
-./Bench +RTS -T
+cabal run my-math-utilities:exe:bench -- +RTS -T
 ```
+```
+stack run my-math-utilities:exe:bench -- +RTS -T
+```
+
+## Step 5: Clean up
+
+After benchmarking, I can choose to keep the benchmark (and associated executable component) around, but I'll probably
+delete them instead. I've learned something, collected some sweet screenshots for my PR, and I'm ready to move on.
 
 # Caveat emptor
 
