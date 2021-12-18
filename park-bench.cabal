@@ -10,12 +10,15 @@ license-file: LICENSE
 maintainer: Mitchell Rosen <mitchellwrosen@gmail.com>, Travis Staton <hello@travisstaton.com>
 name: park-bench
 stability: experimental
-synopsis: A quick-and-dirty benchmark tool
+synopsis: A quick-and-dirty, low-friction benchmark tool with immediate feedback
 tested-with: GHC == 8.10.7, GHC == 9.0.1, GHC == 9.2.1
 version: 0.1.0
 
 description:
-  A quick-and-dirty benchmark tool.
+  A quick-and-dirty, low-friction benchmark tool with immediate feedback.
+
+extra-doc-files:
+  images/*.png
 
 extra-source-files:
   CHANGELOG.md
@@ -79,8 +82,8 @@ common component
 library
   import: component
   build-depends:
-    bytestring,
-    text,
+    bytestring ^>= 0.10 || ^>= 0.11,
+    text ^>= 1.1 || ^>= 1.2,
   exposed-modules:
     ParkBench
     ParkBench.Internal

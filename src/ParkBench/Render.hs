@@ -35,7 +35,7 @@ estimatesToHeader (NonEmpty.toList -> names) =
 estimatesToRowGroups :: NonEmpty (Estimate RtsStats) -> [RowGroup]
 estimatesToRowGroups (summary0 :| summaries0) =
   [ RowGroup
-      "Benchmark"
+      "Statistics"
       [ render (R "Samples" (Just . IncomparableWord3Cell . samples)),
         render (R "CV (σ/μ)" (Just . IncomparablePercentageCell . goodness))
       ],

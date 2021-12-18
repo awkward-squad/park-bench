@@ -4,6 +4,8 @@
 is designed to optimize the workflow in which a programmer makes a small change to a function and wants to measure its
 performance impact with as little friction as possible.
 
+![Screenshot](https://github.com/awkward-squad/park-bench/blob/main/images/screenshot.png?raw=true)
+
 # Example usage
 
 Say I am interested in improving the performance of `fib`, which is a function defined in module `MyMathUtilities.Fib`
