@@ -1,7 +1,9 @@
 module ParkBench.Prelude
   ( divide,
     divide',
+    divideDouble,
     r2d,
+    w2d,
     w2r,
     module X,
   )
@@ -27,8 +29,15 @@ divide' :: Rational -> Rational -> Maybe Rational
 divide' n d =
   if d == 0 then Nothing else Just (n / d)
 
+divideDouble :: Double -> Double -> Double
+divideDouble x y =
+  if y == 0 then 0 else x / y
+
 r2d :: Rational -> Double
 r2d = realToFrac
+
+w2d :: Word64 -> Double
+w2d = fromIntegral
 
 w2r :: Word64 -> Rational
 w2r = fromIntegral

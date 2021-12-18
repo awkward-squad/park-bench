@@ -9,15 +9,16 @@ module ParkBench.Builder
     c,
     cs,
     Builder.decimal,
+    double,
+    double4,
     ParkBench.Builder.empty,
-    multiplier,
     nanos3,
     nanos4,
     ParkBench.Builder.null,
     percentage,
     sepBy,
-    rational4,
     t,
+    word3,
   )
 where
 
@@ -34,8 +35,8 @@ build =
   LazyText.toStrict . Builder.toLazyText
 
 -- | Render nanoseconds, trying to fit into 4 characters.
-bytes4 :: Rational -> Builder
-bytes4 (r2d -> b)
+bytes4 :: Double -> Builder
+bytes4 b
   | b < 0.5 = ParkBench.Builder.empty
   | b < 995 = double 0 b <> " b"
   | b < 9_950 = double 2 kb <> " kb"
@@ -65,19 +66,29 @@ double :: Int -> Double -> Builder
 double i =
   Builder.formatRealFloat Builder.Fixed (Just i)
 
+-- | Render a double, trying to fit into 4 characters.
+double4 :: Double -> Builder
+double4 n
+  | a < 0.005 = ParkBench.Builder.empty
+  | a < 9.95 = double 2 n
+  | a < 99.5 = double 1 n
+  | a < 995 = double 0 n
+  | a < 9_950 = double 1 k <> "k"
+  | a < 995_000 = double 0 k <> "k"
+  | a < 9_950_000 = double 1 m <> "m"
+  | a < 995_000_000 = double 0 m <> "m"
+  | a < 9_950_000_000 = double 1 b <> "b"
+  | otherwise = double 0 n <> "b"
+  where
+    a = abs n
+    k = n / 1_000
+    m = n / 1_000_000
+    b = n / 1_000_000_000
+
 empty :: Builder
 empty =
   mempty
 {-# INLINE empty #-}
-
-multiplier :: Rational -> Builder
-multiplier (r2d -> n)
-  | a < 0.005 = ParkBench.Builder.empty
-  | a < 9.95 = double 2 n <> "x"
-  | a < 99.5 = double 1 n <> "x"
-  | otherwise = double 0 n <> "x"
-  where
-    a = abs n
 
 -- | Render nanoseconds, trying to fit into 3 characters.
 nanos3 :: Rational -> Builder
@@ -96,8 +107,8 @@ nanos3 (r2d -> ns)
     s = ns / 1_000_000_000
 
 -- | Render nanoseconds, trying to fit into 4 characters.
-nanos4 :: Rational -> Builder
-nanos4 (r2d -> ns)
+nanos4 :: Double -> Builder
+nanos4 ns
   | ns < 0.5 = ParkBench.Builder.empty
   | ns < 995 = double 0 ns <> " ns"
   | ns < 9_950 = double 2 us <> " µs"
@@ -119,25 +130,14 @@ null :: Builder -> Bool
 null =
   LazyText.null . Builder.toLazyText
 
-percentage :: Rational -> Builder
+percentage :: Double -> Builder
 percentage ((* 100) -> n)
   | a < 5 / 1000 = ParkBench.Builder.empty
-  | a < 995 / 100 = double 2 d <> "%"
-  | a < 100 = double 1 d <> "%"
-  | otherwise = double 0 d <> "%"
+  | a < 995 / 100 = double 2 n <> "%"
+  | a < 100 = double 1 n <> "%"
+  | otherwise = double 0 n <> "%"
   where
     a = abs n
-    d = r2d n
-
--- | Render a rational, trying to fit into 4 characters.
-rational4 :: Rational -> Builder
-rational4 (r2d -> d)
-  | a < 0.005 = ParkBench.Builder.empty
-  | a < 9.95 = double 2 d
-  | a < 99.5 = double 1 d
-  | otherwise = double 0 d
-  where
-    a = abs d
 
 sepBy :: [Builder] -> Builder -> Builder
 sepBy xs x =
@@ -147,3 +147,18 @@ t :: Text -> Builder
 t =
   Builder.fromText
 {-# INLINE t #-}
+
+-- | Render a word, trying to fit into 3 characters.
+word3 :: Word64 -> Builder
+word3 (w2d -> n)
+  | n < 995 = double 0 n
+  | n < 9_950 = double 1 k <> "k"
+  | n < 995_000 = double 0 k <> "k"
+  | n < 9_950_000 = double 1 m <> "m"
+  | n < 995_000_000 = double 0 m <> "m"
+  | n < 9_950_000_000 = double 1 b <> "b"
+  | otherwise = double 0 b <> "b"
+  where
+    k = n / 1_000
+    m = n / 1_000_000
+    b = n / 1_000_000_000

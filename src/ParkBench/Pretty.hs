@@ -5,7 +5,8 @@ module ParkBench.Pretty
     Cellular (..),
     BytesCell (..),
     BytesPerSecondCell (..),
-    EstNanosecondsCell (..),
+    IncomparablePercentageCell (..),
+    IncomparableWord3Cell (..),
     NanosecondsCell (..),
     NumberCell (..),
     NumberCell' (..),
@@ -27,7 +28,6 @@ where
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe
 import Data.Ord (Down (..))
-import Data.Ratio (approxRational)
 import Data.String (IsString (..))
 import qualified Data.Text as Text
 import ParkBench.Builder (Builder)
@@ -42,28 +42,28 @@ data R a b
   = R Cell (a -> Maybe b)
 
 class Ord a => Cellular a where
+  cellDelta :: a -> a -> Double
   cellString :: a -> Builder
-  cellValue :: a -> Rational
 
 newtype BytesCell
-  = BytesCell Rational
-  deriving (Eq) via Rational
-  deriving (Ord) via Down Rational
+  = BytesCell Double
+  deriving (Eq) via Double
+  deriving (Ord) via Down Double
 
 instance Cellular BytesCell where
+  cellDelta = coerce doubleDelta
   cellString (BytesCell r) = Builder.bytes4 r
-  cellValue = coerce
 
 newtype BytesPerSecondCell
-  = BytesPerSecondCell Rational
-  deriving (Eq) via Rational
-  deriving (Ord) via Down Rational
+  = BytesPerSecondCell Double
+  deriving (Eq) via Double
+  deriving (Ord) via Down Double
 
 instance Cellular BytesPerSecondCell where
+  cellDelta = coerce doubleDelta
   cellString (BytesPerSecondCell r) = prettyBytesPerSecond r
-  cellValue = coerce
 
-prettyBytesPerSecond :: Rational -> Builder
+prettyBytesPerSecond :: Double -> Builder
 prettyBytesPerSecond r =
   if Builder.null s
     then Builder.empty
@@ -71,73 +71,70 @@ prettyBytesPerSecond r =
   where
     s = Builder.bytes4 r
 
+newtype IncomparablePercentageCell
+  = IncomparablePercentageCell Double
+  deriving (Eq) via Double
+  deriving (Ord) via Down Double
+
+instance Cellular IncomparablePercentageCell where
+  cellDelta _ _ = 0
+  cellString (IncomparablePercentageCell r) = Builder.percentage r
+
 newtype NumberCell
-  = NumberCell Rational
-  deriving (Eq) via Rational
-  deriving (Ord) via Down Rational
+  = NumberCell Double
+  deriving (Eq) via Double
+  deriving (Ord) via Down Double
 
 instance Cellular NumberCell where
-  cellString (NumberCell r) = Builder.rational4 r
-  cellValue = coerce
+  cellDelta = coerce doubleDelta
+  cellString (NumberCell r) = Builder.double4 r
 
 newtype NumberCell'
-  = NumberCell' Rational
-  deriving (Eq, Ord) via Rational
+  = NumberCell' Double
+  deriving (Eq, Ord) via Double
   deriving (Cellular) via NumberCell
 
-data EstNanosecondsCell
-  = EstNanosecondsCell
-      -- mean
-      {-# UNPACK #-} !Rational
-      -- standard deviation
-      {-# UNPACK #-} !Double
-
-instance Eq EstNanosecondsCell where
-  EstNanosecondsCell x _ == EstNanosecondsCell y _ = x == y
-
-instance Ord EstNanosecondsCell where
-  compare (EstNanosecondsCell x _) (EstNanosecondsCell y _) = compare y x
-
-instance Cellular EstNanosecondsCell where
-  cellString (EstNanosecondsCell x y) = prettyEstNanoseconds x y
-  cellValue (EstNanosecondsCell x _) = x
-
-prettyEstNanoseconds :: Rational -> Double -> Builder
-prettyEstNanoseconds n m =
-  if Builder.null m'
-    then Builder.nanos4 n
-    else Builder.nanos4 n <> " ±" <> m'
-  where
-    m' = Builder.nanos3 (2 * (approxRational m (1 / 1_000_000_000)))
-
 newtype NanosecondsCell
-  = NanosecondsCell Rational
-  deriving (Eq) via Rational
-  deriving (Ord) via Down Rational
+  = NanosecondsCell Double
+  deriving (Eq) via Double
+  deriving (Ord) via Down Double
 
 instance Cellular NanosecondsCell where
+  cellDelta = coerce doubleDelta
   cellString (NanosecondsCell r) = Builder.nanos4 r
-  cellValue = coerce
 
 newtype PercentageCell
-  = PercentageCell Rational
-  deriving (Eq) via Rational
-  deriving (Ord) via Down Rational
+  = PercentageCell Double
+  deriving (Eq) via Double
+  deriving (Ord) via Down Double
 
 instance Cellular PercentageCell where
+  cellDelta = coerce doubleDelta
   cellString (PercentageCell r) = Builder.percentage r
-  cellValue = coerce
 
-prettyDelta :: Rational -> Builder
+prettyDelta :: Double -> Builder
 prettyDelta n
-  | n >= 1 = Builder.multiplier (n + 1)
-  | n <= -0.5 = Builder.multiplier (-1 `divide` (n + 1))
+  | n >= 1 = Builder.double4 (n + 1) <> "x"
+  | n <= -0.5 = Builder.double4 (-1 `divideDouble` (n + 1)) <> "x"
   | otherwise = Builder.percentage n
 
 newtype PercentageCell'
-  = PercentageCell' Rational
-  deriving (Eq, Ord) via Rational
+  = PercentageCell' Double
+  deriving (Eq, Ord) via Double
   deriving (Cellular) via PercentageCell
+
+newtype IncomparableWord3Cell
+  = IncomparableWord3Cell Word64
+  deriving (Eq) via Word64
+  deriving (Ord) via Down Word64
+
+instance Cellular IncomparableWord3Cell where
+  cellDelta _ _ = 0 -- incomparable
+  cellString (IncomparableWord3Cell r) = Builder.word3 r
+
+doubleDelta :: Double -> Double -> Double
+doubleDelta v1 v2 =
+  (v2 - v1) `divideDouble` v1
 
 rowMaker :: forall a. NonEmpty a -> (forall b. Cellular b => R a b -> Row)
 rowMaker (summary0 :| summaries0) (R name (f :: a -> Maybe b)) =
@@ -167,7 +164,7 @@ rowMaker (summary0 :| summaries0) (R name (f :: a -> Maybe b)) =
     delta v1 v2 =
       if Builder.null (cellString v1) || Builder.null (cellString v2)
         then EmptyCell
-        else colorize (prettyDelta ((cellValue v2 - cellValue v1) `divide` cellValue v1))
+        else colorize (prettyDelta (cellDelta v1 v2))
       where
         colorize :: Builder -> Cell
         colorize =
@@ -190,13 +187,11 @@ data Row
   | EmptyRow
 
 data Cell
-  = Append !Cell !Cell
-  | EmptyCell
+  = EmptyCell
   | Cell !Color {-# UNPACK #-} !Text
 
 cellBuilder :: Cell -> Builder
 cellBuilder = \case
-  Append x y -> cellBuilder x <> cellBuilder y
   EmptyCell -> Builder.empty
   Cell color (Builder.t -> s) ->
     case color of
@@ -207,7 +202,6 @@ cellBuilder = \case
 
 cellWidth :: Cell -> Int
 cellWidth = \case
-  Append x y -> cellWidth x + cellWidth y
   Cell _ s -> Text.length s
   EmptyCell -> 0
 
@@ -223,7 +217,6 @@ data Color
 
 isEmptyCell :: Cell -> Bool
 isEmptyCell = \case
-  Append x y -> isEmptyCell x && isEmptyCell y
   -- don't yet have invariant that s is non-null
   Cell _ s -> Text.null s
   EmptyCell -> True

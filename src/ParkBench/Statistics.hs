@@ -6,6 +6,7 @@ module ParkBench.Statistics
     updateEstimate,
     stdev,
     variance,
+    goodness,
     Roll (..),
   )
 where
@@ -43,6 +44,13 @@ variance (Estimate kvariance _ samples) =
   if samples == 1
     then 0
     else kvariance / w2r (samples - 1)
+
+-- | The "goodness" of an estimate, which is just how large its standard deviation is, relative to its mean.
+--
+-- Smaller is better, and the smallest possible value is 0.
+goodness :: Estimate a -> Double
+goodness e =
+  stdev e / r2d (nanoseconds (mean e))
 
 -- | @initialEstimate v@ creates an estimate per thing-that-took-time @v@ that was a run of 1 iteration.
 initialEstimate :: Timed a -> Estimate a

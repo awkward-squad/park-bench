@@ -137,7 +137,9 @@ allocated_bytes_per_second s =
 
 average_live_data :: RtsStats -> Rational
 average_live_data s =
-  cumulative_live_bytes s `divide` major_gcs s
+  -- If the thing didn't even perform 1 major GC, we still performed one ourselves to get accurate an accurate
+  -- cumulative_live_bytes count. So, use 1 as the denominator in this case, too.
+  cumulative_live_bytes s / max 1 (major_gcs s)
 
 copied_bytes :: RtsStats -> Rational
 copied_bytes (RtsStats _ n _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) = n
@@ -156,7 +158,7 @@ elapsed_ns (RtsStats _ _ _ _ _ n _ _ _ _ _ _ _ _ _ _ _ _) = n
 
 gc_average_ns :: RtsStats -> Rational
 gc_average_ns s =
-  gcs s `divide` gc_elapsed_ns s
+  gc_elapsed_ns s `divide` gcs s
 
 gc_cpu_ns :: RtsStats -> Rational
 gc_cpu_ns (RtsStats _ _ _ _ _ _ n _ _ _ _ _ _ _ _ _ _ _) = n

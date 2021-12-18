@@ -7,7 +7,6 @@ where
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Text as Text
-import qualified ParkBench.Builder as Builder
 import ParkBench.Named (Named)
 import qualified ParkBench.Named as Named
 import ParkBench.Prelude
@@ -26,12 +25,7 @@ estimatesToHeader (NonEmpty.toList -> names) =
     go :: [Named (Estimate RtsStats)] -> [Cell]
     go = \case
       [] -> []
-      x : xs ->
-        EmptyCell :
-        Append
-          (Cell Blue (Text.map dash (Named.name x)))
-          (Cell White (Builder.build (Builder.c '/' <> Builder.decimal (samples (Named.thing x))))) :
-        go xs
+      x : xs -> EmptyCell : Cell Blue (Text.map dash (Named.name x)) : go xs
 
     dash :: Char -> Char
     dash = \case
@@ -41,51 +35,47 @@ estimatesToHeader (NonEmpty.toList -> names) =
 estimatesToRowGroups :: NonEmpty (Estimate RtsStats) -> [RowGroup]
 estimatesToRowGroups (summary0 :| summaries0) =
   [ RowGroup
+      "Benchmark"
+      [ render (R "Samples" (Just . IncomparableWord3Cell . samples)),
+        render (R "CV (σ/μ)" (Just . IncomparablePercentageCell . goodness))
+      ],
+    RowGroup
       "Elapsed time"
-      [ render (R "Total" (\e -> Just (EstNanosecondsCell (nanoseconds (mean e)) (stdev e)))),
-        render (R "Mutator" (Just . NanosecondsCell . mutator_elapsed_ns . evalue)),
-        render (R "Mutator %" (Just . PercentageCell' . mut_wall_percent . evalue)),
-        render (R "Garbage collector" (Just . NanosecondsCell . gc_elapsed_ns . evalue)),
-        render (R "Garbage collector %" (Just . PercentageCell . gc_wall_percent . evalue))
+      [ render (R "Total" (Just . NanosecondsCell . r2d . nanoseconds . mean)),
+        render (R "Mutator" (Just . NanosecondsCell . r2d . mutator_elapsed_ns . value . mean)),
+        render (R "Mutator %" (Just . PercentageCell' . r2d . mut_wall_percent . value . mean)),
+        render (R "GC" (Just . NanosecondsCell . r2d . gc_elapsed_ns . value . mean)),
+        render (R "GC %" (Just . PercentageCell . r2d . gc_wall_percent . value . mean))
       ],
     RowGroup
       "CPU time"
-      [ render (R "Total" (Just . NanosecondsCell . cpu_ns . evalue)),
-        render (R "Mutator" (Just . NanosecondsCell . mutator_cpu_ns . evalue)),
-        render (R "Mutator %" (Just . PercentageCell' . mut_cpu_percent . evalue)),
-        render (R "Garbage collector" (Just . NanosecondsCell . gc_cpu_ns . evalue)),
-        render (R "Garbage collector %" (Just . PercentageCell . gc_cpu_percent . evalue))
+      [ render (R "Total" (Just . NanosecondsCell . r2d . cpu_ns . value . mean)),
+        render (R "Mutator" (Just . NanosecondsCell . r2d . mutator_cpu_ns . value . mean)),
+        render (R "Mutator %" (Just . PercentageCell' . r2d . mut_cpu_percent . value . mean)),
+        render (R "GC" (Just . NanosecondsCell . r2d . gc_cpu_ns . value . mean)),
+        render (R "GC %" (Just . PercentageCell . r2d . gc_cpu_percent . value . mean))
       ],
     RowGroup
-      "Memory"
-      [ render (R "Average residency" (Just . BytesCell . average_live_data . evalue)),
-        render (R "Max residency (all objects)" (Just . BytesCell . max_live_bytes . evalue)),
-        render (R "Max residency (normal objects)" (Just . BytesCell . max_normal_objects_bytes . evalue)),
-        render (R "Max residency (large objects)" (Just . BytesCell . max_large_objects_bytes . evalue)),
-        render (R "Max residency (compact regions)" (Just . BytesCell . max_compact_bytes . evalue)),
-        render (R "Allocated" (Just . BytesCell . allocated_bytes . evalue)),
-        render (R "Allocated per second" (Just . BytesPerSecondCell . allocated_bytes_per_second . evalue)),
-        render (R "Copied during GC" (Just . BytesCell . copied_bytes . evalue)),
-        render (R "Copied during parallel GC" (Just . BytesCell . par_copied_bytes . evalue)),
-        render (R "Allocated from OS by GHC" (Just . BytesCell . max_mem_in_use_bytes . evalue)),
-        render (R "Wasted by GHC" (Just . BytesCell . max_slop_bytes . evalue))
+      "Memory usage"
+      [ render (R "Avg" (Just . BytesCell . r2d . average_live_data . value . mean)),
+        render (R "Max" (Just . BytesCell . r2d . max_live_bytes . value . mean))
+      ],
+    RowGroup
+      "Memory pressure"
+      [ render (R "Allocated" (Just . BytesCell . r2d . allocated_bytes . value . mean)),
+        render (R "Allocated/sec" (Just . BytesPerSecondCell . r2d . allocated_bytes_per_second . value . mean)),
+        render (R "Copied during GC" (Just . BytesCell . r2d . copied_bytes . value . mean))
       ],
     -- TODO nonmoving GC
     RowGroup
       "Garbage collection"
-      [ render (R "Collections (total)" (Just . NumberCell . gcs . evalue)),
-        render (R "Collections (minor)" (Just . NumberCell . minor_gcs . evalue)),
-        render (R "Collections (major)" (Just . NumberCell . major_gcs . evalue)),
-        render (R "Total elapsed time" (Just . NanosecondsCell . gc_elapsed_ns . evalue)),
-        render (R "Total CPU time" (Just . NanosecondsCell . gc_cpu_ns . evalue)),
-        render (R "Average elapsed time" (Just . NanosecondsCell . gc_average_ns . evalue)),
-        render (R "Parallel work balance" (fmap PercentageCell' . work_balance . evalue))
+      [ render (R "Total collections" (Just . NumberCell . r2d . gcs . value . mean)),
+        render (R "Major collections" (Just . NumberCell . r2d . major_gcs . value . mean)),
+        render (R "Avg elapsed time" (Just . NanosecondsCell . r2d . gc_average_ns . value . mean)),
+        render (R "Work balance" (fmap (PercentageCell' . r2d) . work_balance . value . mean))
       ]
   ]
   where
-    evalue :: Estimate a -> a
-    evalue =
-      value . mean
     render :: forall a. Cellular a => R (Estimate RtsStats) a -> Row
     render =
       rowMaker (summary0 :| summaries0)
