@@ -1,3 +1,4 @@
+-- | Internal guts, dragons, gargoyles, etc. This module does not follow the PVP.
 module ParkBench.Internal
   ( -- * Benchmarking
     benchmark1,
