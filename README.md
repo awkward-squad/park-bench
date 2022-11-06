@@ -1,3 +1,5 @@
+[![Build Status](https://github.com/awkward-squad/park-bench/workflows/Haskell-CI/badge.svg)](https://github.com/awkward-squad/park-bench/actions?query=workflow%3AHaskell-CI) [![Hackage](https://img.shields.io/hackage/v/park-bench.svg?label=park-bench&logo=haskell)](https://hackage.haskell.org/package/park-bench) [![Stackage LTS](https://stackage.org/package/park-bench/badge/lts)](https://www.stackage.org/lts/package/park-bench) [![Stackage Nightly](https://stackage.org/package/park-bench/badge/nightly)](https://www.stackage.org/nightly/package/park-bench) [![Dependencies](https://img.shields.io/hackage-deps/v/park-bench)](https://packdeps.haskellers.com/reverse/park-bench)
+
 # Overview
 
 `park-bench` is a quick-and-dirty benchmarking tool for comparing the performance of Haskell functions. Specifically, it
