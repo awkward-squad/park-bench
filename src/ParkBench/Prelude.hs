@@ -13,6 +13,7 @@ import Control.Applicative as X
 import Control.Monad as X
 import Data.Coerce as X (coerce)
 import Data.Foldable as X (fold, foldl')
+import Data.Functor as X (($>))
 import Data.Proxy as X (Proxy (..))
 import Data.Text as X (Text)
 import Data.Typeable as X (Typeable)

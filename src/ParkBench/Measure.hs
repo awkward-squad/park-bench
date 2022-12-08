@@ -1,13 +1,9 @@
--- | This module contains helpers for benchmarking Haskell functions and IO actions.
-module ParkBench.Benchmark
-  ( whnf,
-    whnfIO,
-    measure,
+module ParkBench.Measure
+  ( measure,
   )
 where
 
 import qualified GHC.Stats as GHC
-import ParkBench.BenchmarkInternal (whnf, whnfIO)
 import ParkBench.Prelude
 import ParkBench.RtsStats (RtsStats (RtsStats))
 import ParkBench.Statistics (Timed (..))

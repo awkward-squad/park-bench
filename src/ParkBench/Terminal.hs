@@ -16,8 +16,10 @@ import ParkBench.Prelude
 import System.IO (hSetEcho, stdin)
 
 withTerminal :: IO a -> IO a
-withTerminal =
-  bracket_ hideCursor showCursor . bracket_ (hSetEcho stdin False) (hSetEcho stdin True)
+withTerminal action =
+  bracket_ hideCursor showCursor do
+    bracket_ (hSetEcho stdin False) (hSetEcho stdin True) do
+      action
 
 hideCursor :: IO ()
 hideCursor =

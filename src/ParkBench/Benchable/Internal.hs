@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -O2 -fno-full-laziness -fno-prof-auto #-}
 
-module ParkBench.BenchmarkInternal
+module ParkBench.Benchable.Internal
   ( whnf,
     whnfIO,
   )

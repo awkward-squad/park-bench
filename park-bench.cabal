@@ -90,10 +90,11 @@ library
     ParkBench.Internal
   hs-source-dirs: src
   other-modules:
-    ParkBench.Benchmark
-    ParkBench.BenchmarkInternal
+    ParkBench.Benchable
+    ParkBench.Benchable.Internal
     ParkBench.Builder
     ParkBench.Driver
+    ParkBench.Measure
     ParkBench.Named
     ParkBench.Prelude
     ParkBench.Pretty

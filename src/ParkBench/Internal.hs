@@ -9,9 +9,14 @@ module ParkBench.Internal
     pulls,
     pull,
 
-    -- ** Low-level
+    -- ** Benchable
+    Benchable,
+    mapIO,
+    run,
     whnf,
     whnfIO,
+
+    -- * Measurement
     measure,
 
     -- * Statistics
@@ -63,8 +68,9 @@ module ParkBench.Internal
   )
 where
 
-import ParkBench.Benchmark
+import ParkBench.Benchable
 import ParkBench.Driver
+import ParkBench.Measure
 import ParkBench.Pretty
 import ParkBench.RtsStats
 import ParkBench.Statistics
