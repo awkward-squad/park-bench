@@ -10,11 +10,11 @@ import ParkBench.Statistics (Timed (..))
 import System.Mem (performGC)
 
 -- | Measure the time/memory usage of an IO action.
-measure :: IO () -> IO (Timed RtsStats)
-measure act = do
+measure :: IO a -> IO (Timed RtsStats)
+measure action = do
   performGC
   s0 <- GHC.getRTSStats
-  act
+  _ <- action
   s1 <- GHC.getRTSStats
   -- Perform a major GC to update a few stats that are only accurate after a major GC.
   -- But the latest GC before collecting `s1` might have happened to be major, so check that first.
