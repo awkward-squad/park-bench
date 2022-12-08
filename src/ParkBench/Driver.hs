@@ -1,6 +1,7 @@
 module ParkBench.Driver
   ( benchmark1,
-    Pull1 (..),
+    Pull1,
+    pull1,
     benchmark,
     Pull,
     Pulls,
@@ -21,48 +22,50 @@ import ParkBench.Statistics
 newtype Pull1 a
   = Pull1 (IO (Estimate a, Pull1 a))
 
+pull1 :: Pull1 a -> IO (Estimate a, Pull1 a)
+pull1 =
+  coerce
+{-# INLINE pull1 #-}
+
 -- | Like 'benchmark', but optimized for only running one benchmark.
 benchmark1 :: forall a. Roll a => Benchable (Timed a) -> Pull1 a
-benchmark1 benchable =
+benchmark1 benchable = do
   Pull1 do
-    t <- Benchable.run benchable 1
-    pure (andAnother (initialEstimate t))
+    firstTime <- Benchable.run benchable 1
+    pure (go (initialEstimate firstTime))
   where
-    another :: Estimate a -> Pull1 a
-    another e0 =
-      Pull1 do
-        t2 <- Benchable.run benchable n
-        pure (andAnother (updateEstimate n t2 e0))
-      where
-        n = next e0
-    andAnother :: Estimate a -> (Estimate a, Pull1 a)
-    andAnother e =
-      (e, another e)
+    go :: Estimate a -> (Estimate a, Pull1 a)
+    go oldEstimate =
+      ( oldEstimate,
+        Pull1 do
+          let newIters = itersInOneTenthOfASecond oldEstimate
+          newTime <- Benchable.run benchable newIters
+          pure (go (updateEstimate newIters newTime oldEstimate))
+      )
 {-# SPECIALIZE benchmark1 :: Benchable (Timed RtsStats) -> Pull1 RtsStats #-}
 
 benchmark :: forall a. Roll a => Benchable (Timed a) -> IO (IO (Estimate a), Pull a)
 benchmark benchable = do
-  t <- Benchable.run benchable 1
-  let e = initialEstimate t
-  ref <- newIORef e
-  let another :: Estimate a -> IO (Pull a)
-      another e0 = do
-        t2 <- Benchable.run benchable n
-        let !e1 = updateEstimate n t2 e0
-        writeIORef ref e1
-        pure (andAnother e1)
-        where
-          n = next e0
-      andAnother :: Estimate a -> Pull a
-      andAnother e0 =
-        Pull (w2r (samples e0) * nanoseconds (mean e0)) (another e0)
-  pure (readIORef ref, andAnother e)
+  e0 <- initialEstimate <$> Benchable.run benchable 1
+  estimateRef <- newIORef e0
+  let go :: Estimate a -> Pull a
+      go oldEstimate =
+        Pull (elapsed oldEstimate) do
+          let newIters = itersInOneTenthOfASecond oldEstimate
+          newTime <- Benchable.run benchable newIters
+          let !newEstimate = updateEstimate newIters newTime oldEstimate
+          writeIORef estimateRef newEstimate
+          pure (go newEstimate)
+  pure (readIORef estimateRef, go e0)
 {-# SPECIALIZE benchmark :: Benchable (Timed RtsStats) -> IO (IO (Estimate RtsStats), Pull RtsStats) #-}
 
--- target runs that take 0.1 seconds (e.g. 500_000_000 would be 0.5 seconds)
-next :: Estimate a -> Word64
-next Estimate {mean = Timed nanoseconds _, samples} =
-  max 1 (min samples (floor (100_000_000 / nanoseconds)))
+-- Given this latest estimate, how many iters could we run in 0.1 seconds?
+itersInOneTenthOfASecond :: Estimate a -> Word64
+itersInOneTenthOfASecond Estimate {mean, samples} =
+  max 1 (min samples (floor (oneTenthOfASecond / nanoseconds mean)))
+  where
+    oneTenthOfASecond :: Rational
+    oneTenthOfASecond = 100_000_000
 
 data Pull a
   = Pull

@@ -45,8 +45,8 @@ benchmarkOne :: Named (Benchable ()) -> IO void
 benchmarkOne benchable =
   withTerminal do
     let loop :: Driver.Pull1 RtsStats -> Int -> IO void
-        loop (Driver.Pull1 pull0) newlines0 = do
-          (estimate, pull1) <- pull0
+        loop pull0 newlines0 = do
+          (estimate, pull1) <- Driver.pull1 pull0
           newlines1 <- renderSummaries ((benchable $> estimate) :| []) newlines0
           loop pull1 newlines1
     ByteString.putStr (ByteString.singleton newline)

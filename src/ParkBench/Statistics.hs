@@ -4,6 +4,7 @@ module ParkBench.Statistics
     Estimate (..),
     initialEstimate,
     updateEstimate,
+    elapsed,
     stdev,
     variance,
     goodness,
@@ -35,10 +36,17 @@ data Estimate a = Estimate
   }
   deriving stock (Functor, Show)
 
+-- | The total elapsed time of an estimate, in nanoseconds.
+elapsed :: Estimate a -> Rational
+elapsed Estimate {mean, samples} =
+  w2r samples * nanoseconds mean
+
+-- | The standard deviation of an estimate.
 stdev :: Estimate a -> Double
 stdev =
   sqrt . (fromRational @Double) . variance
 
+-- | The variance of an estimate.
 variance :: Estimate a -> Rational
 variance (Estimate kvariance _ samples) =
   if samples == 1
