@@ -1,7 +1,7 @@
 module ParkBench.Terminal
   ( withTerminal,
-    clearFromCursor,
-    cursorUp,
+    Terminal,
+    renderToTerminal,
     blue,
     green,
     red,
@@ -10,16 +10,37 @@ where
 
 import Control.Exception (bracket_)
 import qualified Data.ByteString as ByteString
+import Data.IORef
+import qualified Data.Text.Encoding as Text (encodeUtf8)
 import ParkBench.Builder (Builder)
 import qualified ParkBench.Builder as Builder
 import ParkBench.Prelude
 import System.IO (hSetEcho, stdin)
 
-withTerminal :: IO a -> IO a
-withTerminal action =
+withTerminal :: (Terminal -> IO a) -> IO a
+withTerminal action = do
+  terminal <- newTerminal
   bracket_ hideCursor showCursor do
     bracket_ (hSetEcho stdin False) (hSetEcho stdin True) do
-      action
+      ByteString.putStr (ByteString.singleton newline)
+      action terminal
+
+newtype Terminal
+  = Terminal (IORef Int)
+
+newTerminal :: IO Terminal
+newTerminal =
+  coerce (newIORef (0 :: Int))
+
+renderToTerminal :: Terminal -> Builder -> IO ()
+renderToTerminal (Terminal lastLineCountRef) bytes0 = do
+  lastLineCount <- readIORef lastLineCountRef
+  let bytes = Text.encodeUtf8 (Builder.build (cursorUp lastLineCount <> clearFromCursor <> bytes0))
+  ByteString.putStr bytes
+  writeIORef lastLineCountRef $! ByteString.count newline bytes
+
+newline :: Word8
+newline = 10
 
 hideCursor :: IO ()
 hideCursor =
