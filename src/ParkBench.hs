@@ -19,6 +19,8 @@ import qualified ParkBench.Named as Named
 import ParkBench.Prelude
 import ParkBench.Pretty (renderTable)
 import ParkBench.Render (estimatesToTable)
+import ParkBench.RtsStats (RtsStats)
+import ParkBench.Statistics (Estimate)
 import ParkBench.Terminal (renderToTerminal, withTerminal)
 
 -- | A single benchmark.
@@ -39,9 +41,11 @@ benchmark benchmarks =
 benchmarkOne :: Named (Benchable ()) -> IO void
 benchmarkOne benchable =
   withTerminal \terminal -> do
-    loopForever (Driver.benchmark1 (Benchable.mapIO Measure.measure (Named.thing benchable))) \pull0 -> do
+    loopForever (Driver.benchmark1 100_000_000 (Benchable.mapIO Measure.measure (Named.thing benchable))) \pull0 -> do
       (estimate, pull1) <- Driver.pull1 pull0
-      renderToTerminal terminal (renderTable (estimatesToTable ((benchable $> estimate) :| [])))
+      let estimates :: NonEmpty (Named (Estimate RtsStats))
+          estimates = (benchable $> estimate) :| []
+      renderToTerminal terminal (renderTable (estimatesToTable estimates))
       pure pull1
 
 benchmarkMany :: NonEmpty (Named (Benchable ())) -> IO void
@@ -49,7 +53,7 @@ benchmarkMany benchables =
   withTerminal \terminal -> do
     summaries0 <-
       (traverse . traverse)
-        (\benchable -> Driver.benchmark (Benchable.mapIO Measure.measure benchable))
+        (\benchable -> Driver.benchmark 100_000_000 (Benchable.mapIO Measure.measure benchable))
         benchables
     loopForever (Driver.pulls (snd . Named.thing <$> summaries0)) \pulls0 -> do
       summaries <- traverse (traverse fst) summaries0

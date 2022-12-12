@@ -23,12 +23,11 @@ estimatesToHeader (NonEmpty.toList -> names) =
   (if length names > 2 then (++ ["Total"]) else id) (go names)
   where
     go :: [Named (Estimate RtsStats)] -> [Cell]
-    go = \case
-      [] -> []
-      x : xs -> EmptyCell : Cell Blue (Text.map dash (Named.name x)) : go xs
+    go =
+      foldMap \x -> [EmptyCell, Cell Blue (Text.map spaceToDash (Named.name x))]
 
-    dash :: Char -> Char
-    dash = \case
+    spaceToDash :: Char -> Char
+    spaceToDash = \case
       ' ' -> '─'
       c -> c
 
