@@ -93,6 +93,7 @@ library
     ParkBench.Benchable
     ParkBench.Benchable.Internal
     ParkBench.Builder
+    ParkBench.Config
     ParkBench.Driver
     ParkBench.Measure
     ParkBench.Named

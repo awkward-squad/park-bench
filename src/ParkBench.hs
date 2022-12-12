@@ -12,6 +12,7 @@ import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Text as Text (pack)
 import ParkBench.Benchable (Benchable)
 import qualified ParkBench.Benchable as Benchable
+import qualified ParkBench.Config as Config
 import qualified ParkBench.Driver as Driver
 import qualified ParkBench.Measure as Measure
 import ParkBench.Named (Named (Named))
@@ -39,9 +40,13 @@ benchmark benchmarks =
     Just benchables -> benchmarkMany (coerce benchables)
 
 benchmarkOne :: Named (Benchable ()) -> IO void
-benchmarkOne benchable =
+benchmarkOne benchable = do
+  config <- Config.getFromEnv
   withTerminal \terminal -> do
-    loopForever (Driver.benchmark1 100_000_000 (Benchable.mapIO Measure.measure (Named.thing benchable))) \pull0 -> do
+    let firstPull :: Driver.Pull1 RtsStats
+        firstPull =
+          Driver.benchmark1 (Config.runlen config) (Benchable.mapIO Measure.measure (Named.thing benchable))
+    loopForever firstPull \pull0 -> do
       (estimate, pull1) <- Driver.pull1 pull0
       let estimates :: NonEmpty (Named (Estimate RtsStats))
           estimates = (benchable $> estimate) :| []
@@ -49,11 +54,12 @@ benchmarkOne benchable =
       pure pull1
 
 benchmarkMany :: NonEmpty (Named (Benchable ())) -> IO void
-benchmarkMany benchables =
+benchmarkMany benchables = do
+  config <- Config.getFromEnv
   withTerminal \terminal -> do
     summaries0 <-
       (traverse . traverse)
-        (\benchable -> Driver.benchmark 100_000_000 (Benchable.mapIO Measure.measure benchable))
+        (\benchable -> Driver.benchmark (Config.runlen config) (Benchable.mapIO Measure.measure benchable))
         benchables
     loopForever (Driver.pulls (snd . Named.thing <$> summaries0)) \pulls0 -> do
       summaries <- traverse (traverse fst) summaries0
