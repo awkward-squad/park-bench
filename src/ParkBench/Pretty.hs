@@ -13,8 +13,6 @@ module ParkBench.Pretty
     PercentageCell (..),
     PercentageCell' (..),
     rowMaker,
-
-    -- *
     Table (..),
     renderTable,
     RowGroup (..),
@@ -193,7 +191,7 @@ data Cell
 cellBuilder :: Cell -> Builder
 cellBuilder = \case
   EmptyCell -> Builder.empty
-  Cell color (Builder.t -> s) ->
+  Cell color (Builder.text -> s) ->
     case color of
       Blue -> Terminal.blue s
       Green -> Terminal.green s
@@ -227,34 +225,34 @@ data Align
 
 renderTable :: Table -> Builder
 renderTable (Table labels rowGroups) =
-  (header : mapMaybe renderRowGroup rowGroups ++ [footer]) `Builder.sepBy` Builder.c '\n'
+  (header : mapMaybe renderRowGroup rowGroups ++ [footer]) `Builder.sepBy` Builder.char '\n'
   where
     header :: Builder
     header =
-      Builder.c '┌'
-        <> ((map (renderCell AlignLeft '─') (zip (map (+ 2) widths) labels)) `Builder.sepBy` Builder.c '┬')
-        <> Builder.c '┐'
+      Builder.char '┌'
+        <> ((map (renderCell AlignLeft '─') (zip (map (+ 2) widths) labels)) `Builder.sepBy` Builder.char '┬')
+        <> Builder.char '┐'
 
     footer :: Builder
     footer =
-      Builder.c '└'
-        <> ((map (\n -> Builder.cs (n + 2) '─') widths) `Builder.sepBy` Builder.c '┴')
-        <> Builder.c '┘'
+      Builder.char '└'
+        <> ((map (\n -> Builder.chars (n + 2) '─') widths) `Builder.sepBy` Builder.char '┴')
+        <> Builder.char '┘'
 
     renderRowGroup :: RowGroup -> Maybe Builder
     renderRowGroup (RowGroup label rows) =
       case mapMaybe renderRow rows of
         [] -> Nothing
-        s -> Just ((line : s) `Builder.sepBy` Builder.c '\n')
+        s -> Just ((line : s) `Builder.sepBy` Builder.char '\n')
       where
         line =
-          Builder.c '├'
+          Builder.char '├'
             <> "\ESC[1m\ESC[97m"
-            <> Builder.t (Text.map dash label)
+            <> Builder.text (Text.map dash label)
             <> "\ESC[39m\ESC[22m"
-            <> Builder.cs (head widths + 2 - Text.length label) '─'
-            <> foldMap (\n -> Builder.c '┼' <> Builder.cs (n + 2) '─') (tail widths)
-            <> Builder.c '┤'
+            <> Builder.chars (head widths + 2 - Text.length label) '─'
+            <> foldMap (\n -> Builder.char '┼' <> Builder.chars (n + 2) '─') (tail widths)
+            <> Builder.char '┤'
 
         dash :: Char -> Char
         dash = \case
@@ -272,7 +270,7 @@ renderTable (Table labels rowGroups) =
         AlignLeft -> cellBuilder cell <> padding
         AlignRight -> padding <> cellBuilder cell
       where
-        padding = Builder.cs (n - cellWidth cell) bg
+        padding = Builder.chars (n - cellWidth cell) bg
 
     widths :: [Int]
     widths =

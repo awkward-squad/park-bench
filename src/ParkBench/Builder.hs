@@ -6,8 +6,8 @@ module ParkBench.Builder
   ( Builder,
     build,
     bytes4,
-    c,
-    cs,
+    char,
+    chars,
     Builder.decimal,
     double,
     double4,
@@ -17,7 +17,7 @@ module ParkBench.Builder
     ParkBench.Builder.null,
     percentage,
     sepBy,
-    t,
+    text,
     word3,
   )
 where
@@ -53,13 +53,13 @@ bytes4 b
     mb = b / 1_000_000
     gb = b / 1_000_000_000
 
-c :: Char -> Builder
-c =
+char :: Char -> Builder
+char =
   Builder.singleton
-{-# INLINE c #-}
+{-# INLINE char #-}
 
-cs :: Int -> Char -> Builder
-cs n =
+chars :: Int -> Char -> Builder
+chars n =
   mconcat . replicate n . Builder.singleton
 
 double :: Int -> Double -> Builder
@@ -143,10 +143,10 @@ sepBy :: [Builder] -> Builder -> Builder
 sepBy xs x =
   mconcat (List.intersperse x xs)
 
-t :: Text -> Builder
-t =
+text :: Text -> Builder
+text =
   Builder.fromText
-{-# INLINE t #-}
+{-# INLINE text #-}
 
 -- | Render a word, trying to fit into 3 characters.
 word3 :: Word64 -> Builder
