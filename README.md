@@ -8,6 +8,12 @@ performance impact with as little friction as possible.
 
 ![Screenshot](https://github.com/awkward-squad/park-bench/blob/main/images/screenshot.png?raw=true)
 
+# Configuration
+
+| Environment variable name | Type | Meaning | Default value |
+| --- | --- | --- |
+| `PARK_BENCH_RUNLEN` | Float | The target number of seconds that each benchmark run takes | `0.1` |
+
 # Example usage
 
 Say I am interested in improving the performance of `fib`, which is a function defined in module `MyMathUtilities.Fib`

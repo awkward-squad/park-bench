@@ -2,6 +2,7 @@ module ParkBench.Prelude
   ( divide,
     divide',
     divideDouble,
+    doubleToRational,
     r2d,
     w2d,
     w2r,
@@ -33,6 +34,9 @@ divide' n d =
 divideDouble :: Double -> Double -> Double
 divideDouble x y =
   if y == 0 then 0 else x / y
+
+doubleToRational :: Double -> Rational
+doubleToRational = realToFrac
 
 r2d :: Rational -> Double
 r2d = realToFrac
