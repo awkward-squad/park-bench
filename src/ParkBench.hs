@@ -19,7 +19,6 @@ import qualified ParkBench.Named as Named
 import ParkBench.Prelude
 import ParkBench.Pretty (renderTable)
 import ParkBench.Render (estimatesToTable)
-import ParkBench.RtsStats (RtsStats)
 import ParkBench.Terminal (renderToTerminal, withTerminal)
 
 -- | A single benchmark.
@@ -40,12 +39,10 @@ benchmark benchmarks =
 benchmarkOne :: Named (Benchable ()) -> IO void
 benchmarkOne benchable =
   withTerminal \terminal -> do
-    let loop :: Driver.Pull1 RtsStats -> IO void
-        loop pull0 = do
-          (estimate, pull1) <- Driver.pull1 pull0
-          renderToTerminal terminal (renderTable (estimatesToTable ((benchable $> estimate) :| [])))
-          loop pull1
-    loop (Driver.benchmark1 (Benchable.mapIO Measure.measure (Named.thing benchable)))
+    loopForever (Driver.benchmark1 (Benchable.mapIO Measure.measure (Named.thing benchable))) \pull0 -> do
+      (estimate, pull1) <- Driver.pull1 pull0
+      renderToTerminal terminal (renderTable (estimatesToTable ((benchable $> estimate) :| [])))
+      pure pull1
 
 benchmarkMany :: NonEmpty (Named (Benchable ())) -> IO void
 benchmarkMany benchables =
@@ -54,13 +51,18 @@ benchmarkMany benchables =
       (traverse . traverse)
         (\benchable -> Driver.benchmark (Benchable.mapIO Measure.measure benchable))
         benchables
-    let loop :: Driver.Pulls RtsStats -> IO void
-        loop pulls0 = do
-          summaries <- traverse (traverse fst) summaries0
-          renderToTerminal terminal (renderTable (estimatesToTable summaries))
-          pulls1 <- Driver.pull pulls0
-          loop pulls1
-    loop (Driver.pulls (snd . Named.thing <$> summaries0))
+    loopForever (Driver.pulls (snd . Named.thing <$> summaries0)) \pulls0 -> do
+      summaries <- traverse (traverse fst) summaries0
+      renderToTerminal terminal (renderTable (estimatesToTable summaries))
+      Driver.pull pulls0
+
+loopForever :: forall a void. a -> (a -> IO a) -> IO void
+loopForever x0 once =
+  let loop :: a -> IO void
+      loop x = do
+        y <- once x
+        loop y
+   in loop x0
 
 -- | Benchmark a function. The result is evaluated to weak head normal form.
 function ::
