@@ -11,7 +11,7 @@ performance impact with as little friction as possible.
 # Configuration
 
 | Environment variable name | Type | Meaning | Default value |
-| --- | --- | --- |
+| --- | --- | --- | --- |
 | `PARK_BENCH_RUNLEN` | Float | The target number of seconds that each benchmark run takes | `0.1` |
 
 # Example usage
