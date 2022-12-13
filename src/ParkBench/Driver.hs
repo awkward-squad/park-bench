@@ -106,32 +106,32 @@ pulls' = \case
 -- Returns the 'Pulls' to use next time, which reflects the latest benchmark run that just completed.
 pull :: Pulls a -> IO (Pulls a)
 pull = \case
-  P1 (Pull _ p0) -> do
-    p <- p0
-    pure (P1 p)
-  P2 (Pull _ p0) q -> do
-    p <- p0
+  P1 (Pull _ action) -> do
+    x0 <- action
+    pure (P1 x0)
+  P2 (Pull _ action) x1 -> do
+    x0 <- action
     pure
-      if q `isMoreUrgentThan` p
-        then P2 q p
-        else P2 p q
-  P3 (Pull _ p0) q r -> do
-    p <- p0
+      if x1 `isMoreUrgentThan` x0
+        then P2 x1 x0
+        else P2 x0 x1
+  P3 (Pull _ action) x1 x2 -> do
+    x0 <- action
     pure
-      if q `isMoreUrgentThan` p
+      if x1 `isMoreUrgentThan` x0
         then
-          if r `isMoreUrgentThan` p
-            then P3 q r p
-            else P3 q p r
-        else P3 p q r
-  Pn (Pull _ p0) ps -> do
-    p <- p0
-    pure (Pn_ (insertPull p ps))
+          if x2 `isMoreUrgentThan` x0
+            then P3 x1 x2 x0
+            else P3 x1 x0 x2
+        else P3 x0 x1 x2
+  Pn (Pull _ action) xs -> do
+    x0 <- action
+    pure (Pn_ (insertPull x0 xs))
 
 insertPull :: Pull a -> [Pull a] -> [Pull a]
-insertPull p0 = \case
-  [] -> [p0]
-  p1 : ps ->
-    if p0 `isMoreUrgentThan` p1
-      then p0 : p1 : ps
-      else p1 : insertPull p0 ps
+insertPull x0 = \case
+  [] -> [x0]
+  x1 : xs ->
+    if x0 `isMoreUrgentThan` x1
+      then x0 : x1 : xs
+      else x1 : insertPull x0 xs
