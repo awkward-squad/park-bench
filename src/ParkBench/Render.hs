@@ -4,10 +4,8 @@ module ParkBench.Render
   )
 where
 
-import Data.Foldable (toList)
 import qualified Data.Text as Text
 import ParkBench.Array1 (Array1)
-import qualified ParkBench.Array1 as Array1
 import ParkBench.Named (Named)
 import qualified ParkBench.Named as Named
 import ParkBench.Prelude
@@ -16,16 +14,22 @@ import ParkBench.RtsStats
 import ParkBench.Statistics
 
 estimatesToTable :: Array1 (Named (Estimate RtsStats)) -> Table
-estimatesToTable summaries =
-  Table (estimatesToHeader (toList summaries)) (estimatesToRowGroups (Named.thing <$> summaries))
+estimatesToTable estimates =
+  Table (estimatesToHeader estimates) (estimatesToRowGroups (Named.thing <$> estimates))
 
-estimatesToHeader :: [Named (Estimate RtsStats)] -> [Cell]
-estimatesToHeader names =
-  (if length names > 2 then (++ ["Total"]) else id) (go names)
+estimatesToHeader :: Array1 (Named (Estimate RtsStats)) -> [Cell]
+estimatesToHeader estimates =
+  if length estimates > 2
+    then foldMap namedToHeader estimates ++ ["Total"]
+    else foldMap namedToHeader estimates
   where
-    go :: [Named (Estimate RtsStats)] -> [Cell]
-    go =
-      foldMap \x -> [EmptyCell, Cell Blue (Text.map spaceToDash (Named.name x))]
+    namedToHeader :: Named a -> [Cell]
+    namedToHeader x =
+      [EmptyCell, namedToCell x]
+
+    namedToCell :: Named a -> Cell
+    namedToCell =
+      Cell Blue . Text.map spaceToDash . Named.name
 
     spaceToDash :: Char -> Char
     spaceToDash = \case
@@ -76,6 +80,6 @@ estimatesToRowGroups summaries =
       ]
   ]
   where
-    render :: forall a. Cellular a => R (Estimate RtsStats) a -> Row
+    render :: Cellular a => R (Estimate RtsStats) a -> Row
     render =
-      rowMaker (Array1.toList1 summaries)
+      rowMaker summaries

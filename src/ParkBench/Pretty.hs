@@ -23,11 +23,14 @@ module ParkBench.Pretty
   )
 where
 
-import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.Array as Array
+import Data.Foldable (toList)
 import Data.Maybe
 import Data.Ord (Down (..))
 import Data.String (IsString (..))
 import qualified Data.Text as Text
+import ParkBench.Array1 (Array1)
+import qualified ParkBench.Array1 as Array1
 import ParkBench.Builder (Builder)
 import qualified ParkBench.Builder as Builder
 import ParkBench.Prelude
@@ -134,43 +137,47 @@ doubleDelta :: Double -> Double -> Double
 doubleDelta v1 v2 =
   (v2 - v1) `divideDouble` v1
 
-rowMaker :: forall a. NonEmpty a -> (forall b. Cellular b => R a b -> Row)
-rowMaker (summary0 :| summaries0) (R name (f :: a -> Maybe b))
-  | all isEmptyCell cols = EmptyRow
-  | otherwise = Row (name : cols)
+rowMaker :: forall a. Array1 a -> (forall b. Cellular b => R a b -> Row)
+rowMaker (Array1.uncons -> (summary0, summaries0)) (R name (f :: a -> Maybe b)) =
+  let cols =
+        maybe
+          EmptyCell
+          (Cell White . Builder.build . cellString)
+          (f summary0) :
+        makeCols (f summary0) (toList summaries0)
+   in if all isEmptyCell cols then EmptyRow else Row (name : cols)
   where
-    cols :: [Cell]
-    cols =
-      maybe EmptyCell (Cell White . Builder.build . cellString) (f summary0) : makeCols (f summary0) summaries0
-    -- TODO make this cleaner
     makeCols :: Maybe b -> [a] -> [Cell]
     makeCols s0 = \case
-      [] ->
-        case summaries0 of
-          [] -> []
-          _ ->
-            case (f summary0, f (last summaries0)) of
-              (Just v0, Just v1) -> [delta v0 v1]
-              _ -> []
+      [] -> theDeltaCell
       s1 : ss ->
         case (s0, f s1) of
           (Nothing, Just v1) -> EmptyCell : Cell White (Builder.build (cellString v1)) : makeCols (Just v1) ss
-          (Just v0, Just v1) -> delta v0 v1 : Cell White (Builder.build (cellString v1)) : makeCols (Just v1) ss
+          (Just v0, Just v1) -> deltaCell v0 v1 : Cell White (Builder.build (cellString v1)) : makeCols (Just v1) ss
           (_, Nothing) -> EmptyCell : EmptyCell : makeCols Nothing ss
-    delta :: b -> b -> Cell
-    delta v1 v2 =
-      if Builder.null (cellString v1) || Builder.null (cellString v2)
-        then EmptyCell
-        else colorize (prettyDelta (cellDelta v1 v2))
+
+    theDeltaCell :: [Cell]
+    theDeltaCell =
+      if n == 0
+        then []
+        else case (f summary0, f (summaries0 Array.! (n - 1))) of
+          (Just v0, Just v1) -> [deltaCell v0 v1]
+          _ -> []
       where
-        colorize :: Builder -> Cell
-        colorize =
-          ( case compare v1 v2 of
-              LT -> Cell Green
-              EQ -> Cell White
-              GT -> Cell Red
-          )
-            . Builder.build
+        n = length summaries0
+
+deltaCell :: Cellular a => a -> a -> Cell
+deltaCell v1 v2 =
+  if Builder.null (cellString v1) || Builder.null (cellString v2)
+    then EmptyCell
+    else Cell color (Builder.build (prettyDelta (cellDelta v1 v2)))
+  where
+    color :: Color
+    color =
+      case compare v1 v2 of
+        LT -> Green
+        EQ -> White
+        GT -> Red
 
 data Table
   = Table ![Cell] ![RowGroup]
