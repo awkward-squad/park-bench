@@ -30,6 +30,7 @@ source-repository head
 
 common component
   build-depends:
+    array ^>= 0.5,
     base ^>= 4.12 || ^>= 4.13 || ^>= 4.14 || ^>= 4.15 || ^>= 4.16 || ^>= 4.17,
   default-extensions:
     AllowAmbiguousTypes
@@ -89,6 +90,7 @@ library
     ParkBench.Internal
   hs-source-dirs: src
   other-modules:
+    ParkBench.Array1
     ParkBench.Benchable
     ParkBench.Benchable.Internal
     ParkBench.Builder
