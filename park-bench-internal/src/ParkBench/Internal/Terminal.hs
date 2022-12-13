@@ -1,4 +1,4 @@
-module ParkBench.Terminal
+module ParkBench.Internal.Terminal
   ( withTerminal,
     Terminal,
     renderToTerminal,
@@ -12,9 +12,9 @@ import Control.Exception (bracket_)
 import qualified Data.ByteString as ByteString
 import Data.IORef
 import qualified Data.Text.Encoding as Text (encodeUtf8)
-import ParkBench.Builder (Builder)
-import qualified ParkBench.Builder as Builder
-import ParkBench.Prelude
+import ParkBench.Internal.Builder (Builder)
+import qualified ParkBench.Internal.Builder as Builder
+import ParkBench.Internal.Prelude
 import System.IO (hSetEcho, stdin)
 
 withTerminal :: (Terminal -> IO a) -> IO a

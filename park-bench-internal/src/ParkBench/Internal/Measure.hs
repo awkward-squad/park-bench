@@ -1,12 +1,12 @@
-module ParkBench.Measure
+module ParkBench.Internal.Measure
   ( measure,
   )
 where
 
 import qualified GHC.Stats as GHC
-import ParkBench.Prelude
-import ParkBench.RtsStats (RtsStats (RtsStats))
-import ParkBench.Statistics (Timed (..))
+import ParkBench.Internal.Prelude
+import ParkBench.Internal.RtsStats (RtsStats (RtsStats))
+import ParkBench.Internal.Statistics (Timed (..))
 import System.Mem (performGC)
 
 -- | Measure the time/memory usage of an IO action.

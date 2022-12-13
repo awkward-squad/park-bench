@@ -9,21 +9,21 @@ where
 import Control.Concurrent (threadDelay)
 import qualified Data.List.NonEmpty as List1
 import qualified Data.Text as Text (pack)
-import ParkBench.Array1 (Array1)
-import qualified ParkBench.Array1 as Array1
-import ParkBench.Benchable (Benchable)
-import qualified ParkBench.Benchable as Benchable
-import qualified ParkBench.Config as Config
-import qualified ParkBench.Driver as Driver
-import qualified ParkBench.Measure as Measure
-import ParkBench.Named (Named (Named))
-import qualified ParkBench.Named as Named
-import ParkBench.Prelude
-import ParkBench.Pretty (renderTable)
-import ParkBench.Render (estimatesToTable)
-import ParkBench.RtsStats (RtsStats)
-import ParkBench.Statistics (Estimate)
-import ParkBench.Terminal (renderToTerminal, withTerminal)
+import ParkBench.Internal.Array1 (Array1)
+import qualified ParkBench.Internal.Array1 as Array1
+import ParkBench.Internal.Benchable (Benchable)
+import qualified ParkBench.Internal.Benchable as Benchable
+import qualified ParkBench.Internal.Config as Config
+import qualified ParkBench.Internal.Driver as Driver
+import qualified ParkBench.Internal.Measure as Measure
+import ParkBench.Internal.Named (Named (Named))
+import qualified ParkBench.Internal.Named as Named
+import ParkBench.Internal.Prelude
+import ParkBench.Internal.Pretty (renderTable)
+import ParkBench.Internal.Render (estimatesToTable)
+import ParkBench.Internal.RtsStats (RtsStats)
+import ParkBench.Internal.Statistics (Estimate)
+import ParkBench.Internal.Terminal (renderToTerminal, withTerminal)
 
 -- | A single benchmark.
 newtype Benchmark

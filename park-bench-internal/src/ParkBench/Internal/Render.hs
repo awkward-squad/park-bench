@@ -1,17 +1,17 @@
 -- | Rendering code that takes lays out raw benchmarking results in a table.
-module ParkBench.Render
+module ParkBench.Internal.Render
   ( estimatesToTable,
   )
 where
 
 import qualified Data.Text as Text
-import ParkBench.Array1 (Array1)
-import ParkBench.Named (Named)
-import qualified ParkBench.Named as Named
-import ParkBench.Prelude
-import ParkBench.Pretty
-import ParkBench.RtsStats
-import ParkBench.Statistics
+import ParkBench.Internal.Array1 (Array1)
+import ParkBench.Internal.Named (Named)
+import qualified ParkBench.Internal.Named as Named
+import ParkBench.Internal.Prelude
+import ParkBench.Internal.Pretty
+import ParkBench.Internal.RtsStats
+import ParkBench.Internal.Statistics
 
 estimatesToTable :: Array1 (Named (Estimate RtsStats)) -> Table
 estimatesToTable estimates =

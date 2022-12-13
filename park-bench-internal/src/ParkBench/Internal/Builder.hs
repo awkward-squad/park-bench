@@ -2,7 +2,7 @@
 --
 -- Code for printing numbers in 3 or 4 characters adapted from `tasty-bench`:
 --   https://github.com/Bodigrim/tasty-bench/blob/412ae68dbd9582e0b19ff5f2c7f9ead25e104cce/Test/Tasty/Bench.hs#L795
-module ParkBench.Builder
+module ParkBench.Internal.Builder
   ( Builder,
     build,
     bytes4,
@@ -11,10 +11,10 @@ module ParkBench.Builder
     Builder.decimal,
     double,
     double4,
-    ParkBench.Builder.empty,
+    ParkBench.Internal.Builder.empty,
     nanos3,
     nanos4,
-    ParkBench.Builder.null,
+    ParkBench.Internal.Builder.null,
     percentage,
     sepBy,
     text,
@@ -28,7 +28,7 @@ import Data.Text.Lazy.Builder (Builder)
 import qualified Data.Text.Lazy.Builder as Builder
 import qualified Data.Text.Lazy.Builder.Int as Builder (decimal)
 import qualified Data.Text.Lazy.Builder.RealFloat as Builder
-import ParkBench.Prelude
+import ParkBench.Internal.Prelude
 
 build :: Builder -> Text
 build =
@@ -37,7 +37,7 @@ build =
 -- | Render nanoseconds, trying to fit into 4 characters.
 bytes4 :: Double -> Builder
 bytes4 b
-  | b < 0.5 = ParkBench.Builder.empty
+  | b < 0.5 = ParkBench.Internal.Builder.empty
   | b < 995 = double 0 b <> " b"
   | b < 9_950 = double 2 kb <> " kb"
   | b < 99_500 = double 1 kb <> " kb"
@@ -69,7 +69,7 @@ double i =
 -- | Render a double, trying to fit into 4 characters.
 double4 :: Double -> Builder
 double4 n
-  | a < 0.005 = ParkBench.Builder.empty
+  | a < 0.005 = ParkBench.Internal.Builder.empty
   | a < 9.95 = double 2 n
   | a < 99.5 = double 1 n
   | a < 995 = double 0 n
@@ -93,7 +93,7 @@ empty =
 -- | Render nanoseconds, trying to fit into 3 characters.
 nanos3 :: Rational -> Builder
 nanos3 (r2d -> ns)
-  | ns < 0.5 = ParkBench.Builder.empty
+  | ns < 0.5 = ParkBench.Internal.Builder.empty
   | ns < 995 = double 0 ns <> " ns"
   | ns < 9_950 = double 1 us <> " µs"
   | ns < 995_000 = double 0 us <> " µs"
@@ -109,7 +109,7 @@ nanos3 (r2d -> ns)
 -- | Render nanoseconds, trying to fit into 4 characters.
 nanos4 :: Double -> Builder
 nanos4 ns
-  | ns < 0.5 = ParkBench.Builder.empty
+  | ns < 0.5 = ParkBench.Internal.Builder.empty
   | ns < 995 = double 0 ns <> " ns"
   | ns < 9_950 = double 2 us <> " µs"
   | ns < 99_500 = double 1 us <> " µs"
@@ -132,7 +132,7 @@ null =
 
 percentage :: Double -> Builder
 percentage ((* 100) -> n)
-  | a < 5 / 1000 = ParkBench.Builder.empty
+  | a < 5 / 1000 = ParkBench.Internal.Builder.empty
   | a < 995 / 100 = double 2 n <> "%"
   | a < 100 = double 1 n <> "%"
   | otherwise = double 0 n <> "%"

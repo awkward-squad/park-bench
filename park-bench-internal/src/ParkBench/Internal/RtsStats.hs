@@ -1,5 +1,5 @@
 -- | RTS stats type.
-module ParkBench.RtsStats
+module ParkBench.Internal.RtsStats
   ( RtsStats (RtsStats),
     allocated_bytes,
     allocated_bytes_per_second,
@@ -32,8 +32,8 @@ module ParkBench.RtsStats
   )
 where
 
-import ParkBench.Prelude
-import ParkBench.Statistics
+import ParkBench.Internal.Prelude
+import ParkBench.Internal.Statistics
 
 -- | RTS stats type.
 --

@@ -1,4 +1,4 @@
-module ParkBench.Array1
+module ParkBench.Internal.Array1
   ( Array1,
     singleton,
     fromList,
@@ -13,7 +13,7 @@ import qualified Data.Array as Array
 import qualified Data.Foldable as Foldable
 import qualified Data.List.NonEmpty as List (NonEmpty)
 import qualified Data.List.NonEmpty as List1
-import ParkBench.Prelude
+import ParkBench.Internal.Prelude
 
 data Array1 a
   = Array1 a (Array Int a)

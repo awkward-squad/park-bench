@@ -1,5 +1,5 @@
 -- | Generic-ish (not really) pretty-printing utilities and abstractions for rendering the table of cells.
-module ParkBench.Pretty
+module ParkBench.Internal.Pretty
   ( -- * High-level row/cell machinery
     R (..),
     Cellular (..),
@@ -29,12 +29,12 @@ import Data.Maybe
 import Data.Ord (Down (..))
 import Data.String (IsString (..))
 import qualified Data.Text as Text
-import ParkBench.Array1 (Array1)
-import qualified ParkBench.Array1 as Array1
-import ParkBench.Builder (Builder)
-import qualified ParkBench.Builder as Builder
-import ParkBench.Prelude
-import qualified ParkBench.Terminal as Terminal
+import ParkBench.Internal.Array1 (Array1)
+import qualified ParkBench.Internal.Array1 as Array1
+import ParkBench.Internal.Builder (Builder)
+import qualified ParkBench.Internal.Builder as Builder
+import ParkBench.Internal.Prelude
+import qualified ParkBench.Internal.Terminal as Terminal
 
 ------------------------------------------------------------------------------------------------------------------------
 -- High-level row/cell machinery

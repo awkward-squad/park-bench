@@ -1,4 +1,4 @@
-module ParkBench.Prelude
+module ParkBench.Internal.Prelude
   ( divide,
     divide',
     divideDouble,

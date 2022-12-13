@@ -1,10 +1,10 @@
 -- | Utility type.
-module ParkBench.Named
+module ParkBench.Internal.Named
   ( Named (..),
   )
 where
 
-import ParkBench.Prelude
+import ParkBench.Internal.Prelude
 
 -- | A named thing.
 data Named a = Named

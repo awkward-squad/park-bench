@@ -1,4 +1,4 @@
-module ParkBench.Driver
+module ParkBench.Internal.Driver
   ( benchmark1,
     Pull1,
     pull1,
@@ -12,13 +12,13 @@ where
 
 import Data.Foldable (toList)
 import Data.IORef
-import ParkBench.Array1 (Array1)
-import qualified ParkBench.Array1 as Array1
-import ParkBench.Benchable (Benchable)
-import qualified ParkBench.Benchable as Benchable
-import ParkBench.Prelude
-import ParkBench.RtsStats (RtsStats)
-import ParkBench.Statistics
+import ParkBench.Internal.Array1 (Array1)
+import qualified ParkBench.Internal.Array1 as Array1
+import ParkBench.Internal.Benchable (Benchable)
+import qualified ParkBench.Internal.Benchable as Benchable
+import ParkBench.Internal.Prelude
+import ParkBench.Internal.RtsStats (RtsStats)
+import ParkBench.Internal.Statistics
 
 newtype Pull1 a
   = Pull1 (IO (Estimate a, Pull1 a))

@@ -1,10 +1,10 @@
-module ParkBench.Config
+module ParkBench.Internal.Config
   ( Config (..),
     getFromEnv,
   )
 where
 
-import ParkBench.Prelude
+import ParkBench.Internal.Prelude
 import System.Environment
 import Text.Read (readMaybe)
 

@@ -1,5 +1,5 @@
 -- | Simple statistics code.
-module ParkBench.Statistics
+module ParkBench.Internal.Statistics
   ( Timed (..),
     Estimate (..),
     initialEstimate,
@@ -12,7 +12,7 @@ module ParkBench.Statistics
   )
 where
 
-import ParkBench.Prelude
+import ParkBench.Internal.Prelude
 
 -- | A value that took a certan time to compute.
 data Timed a = Timed

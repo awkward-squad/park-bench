@@ -1,4 +1,4 @@
-module ParkBench.Benchable
+module ParkBench.Internal.Benchable
   ( Benchable,
     run,
     mapIO,
@@ -7,8 +7,8 @@ module ParkBench.Benchable
   )
 where
 
-import qualified ParkBench.Benchable.Internal as Internal
-import ParkBench.Prelude
+import qualified ParkBench.Internal.Benchable.Internal as Internal
+import ParkBench.Internal.Prelude
 
 newtype Benchable a
   = Benchable (Word64 -> IO a)
