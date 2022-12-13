@@ -48,7 +48,7 @@ benchmarkOne benchable = do
         firstPull =
           Driver.benchmark1 (Config.runlen config) (Benchable.mapIO Measure.measure (Named.thing benchable))
     loopForever firstPull \pull0 -> do
-      (estimate, pull1) <- Driver.pull1 pull0
+      (estimate, pull1) <- Driver.stepPull1 pull0
       let estimates :: Array1 (Named (Estimate RtsStats))
           estimates = Array1.singleton (benchable $> estimate)
       renderToTerminal terminal (renderTable (estimatesToTable estimates))
@@ -62,8 +62,8 @@ benchmarkMany benchables = do
       (traverse . traverse)
         (\benchable -> Driver.benchmark (Config.runlen config) (Benchable.mapIO Measure.measure benchable))
         benchables
-    loopForever (Driver.makePulls (snd . Named.thing <$> summaries0)) \pulls0 -> do
-      summaries <- traverse (traverse fst) summaries0
+    loopForever (Driver.makePulls (Named.thing <$> summaries0)) \pulls0 -> do
+      summaries <- traverse (traverse Driver.sample) summaries0
       renderToTerminal terminal (renderTable (estimatesToTable summaries))
       Driver.pull pulls0
 

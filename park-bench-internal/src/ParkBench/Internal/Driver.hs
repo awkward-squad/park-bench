@@ -1,12 +1,17 @@
 module ParkBench.Internal.Driver
-  ( benchmark1,
-    Pull1,
-    pull1,
+  ( -- * Benchmark many
     benchmark,
+    LiveBenchmark,
+    sample,
     Pull,
     Pulls,
     makePulls,
     pull,
+
+    -- * Benchmark one
+    benchmark1,
+    Pull1,
+    stepPull1,
   )
 where
 
@@ -20,32 +25,20 @@ import ParkBench.Internal.Prelude
 import ParkBench.Internal.RtsStats (RtsStats)
 import ParkBench.Internal.Statistics
 
-newtype Pull1 a
-  = Pull1 (IO (Estimate a, Pull1 a))
+------------------------------------------------------------------------------------------------------------------------
+-- Benchmark many
 
-pull1 :: Pull1 a -> IO (Estimate a, Pull1 a)
-pull1 =
-  coerce
-{-# INLINE pull1 #-}
+data LiveBenchmark a = LiveBenchmark
+  { _liveBenchmarkSample :: IO (Estimate a),
+    _liveBenchmarkPull :: Pull a
+  }
 
--- | Like 'benchmark', but optimized for only running one benchmark.
-benchmark1 :: forall a. Roll a => Rational -> Benchable (Timed a) -> Pull1 a
-benchmark1 nanos benchable = do
-  Pull1 do
-    firstTime <- Benchable.run benchable 1
-    pure (go (initialEstimate firstTime))
-  where
-    go :: Estimate a -> (Estimate a, Pull1 a)
-    go oldEstimate =
-      ( oldEstimate,
-        Pull1 do
-          let newIters = itersInNanoseconds oldEstimate nanos
-          newTime <- Benchable.run benchable newIters
-          pure (go (updateEstimate newIters newTime oldEstimate))
-      )
-{-# SPECIALIZE benchmark1 :: Rational -> Benchable (Timed RtsStats) -> Pull1 RtsStats #-}
+sample :: LiveBenchmark a -> IO (Estimate a)
+sample =
+  _liveBenchmarkSample
+{-# INLINE sample #-}
 
-benchmark :: forall a. Roll a => Rational -> Benchable (Timed a) -> IO (IO (Estimate a), Pull a)
+benchmark :: forall a. Roll a => Rational -> Benchable (Timed a) -> IO (LiveBenchmark a)
 benchmark nanos benchable = do
   e0 <- initialEstimate <$> Benchable.run benchable 1
   estimateRef <- newIORef e0
@@ -57,8 +50,12 @@ benchmark nanos benchable = do
           let !newEstimate = updateEstimate newIters newTime oldEstimate
           writeIORef estimateRef newEstimate
           pure (go newEstimate)
-  pure (readIORef estimateRef, go e0)
-{-# SPECIALIZE benchmark :: Rational -> Benchable (Timed RtsStats) -> IO (IO (Estimate RtsStats), Pull RtsStats) #-}
+  pure
+    LiveBenchmark
+      { _liveBenchmarkSample = readIORef estimateRef,
+        _liveBenchmarkPull = go e0
+      }
+{-# SPECIALIZE benchmark :: Rational -> Benchable (Timed RtsStats) -> IO (LiveBenchmark RtsStats) #-}
 
 -- Given this latest estimate, how many iters could we run in the given number of nanoseconds?
 itersInNanoseconds :: Estimate a -> Rational -> Word64
@@ -90,8 +87,8 @@ pattern Pn p ps <- Pn_ (p : ps)
 {-# COMPLETE P1, P2, P3, Pn #-}
 
 -- | Construct a 'Pulls' from a non-empty list of 'Pull'.
-makePulls :: Array1 (Pull a) -> Pulls a
-makePulls xs
+makePulls :: Array1 (LiveBenchmark a) -> Pulls a
+makePulls (fmap _liveBenchmarkPull -> xs)
   | n == 1 = P1 (Array1.get 0 xs)
   | n == 2 = P2 (Array1.get 0 xs) (Array1.get 1 xs)
   | n == 3 = P3 (Array1.get 0 xs) (Array1.get 1 xs) (Array1.get 2 xs)
@@ -134,3 +131,31 @@ insertPull x0 = \case
     if x0 `isMoreUrgentThan` x1
       then x0 : x1 : xs
       else x1 : insertPull x0 xs
+
+------------------------------------------------------------------------------------------------------------------------
+-- Benchmark one
+
+newtype Pull1 a
+  = Pull1 (IO (Estimate a, Pull1 a))
+
+stepPull1 :: Pull1 a -> IO (Estimate a, Pull1 a)
+stepPull1 =
+  coerce
+{-# INLINE stepPull1 #-}
+
+-- | Like 'benchmark', but optimized for only running one benchmark.
+benchmark1 :: forall a. Roll a => Rational -> Benchable (Timed a) -> Pull1 a
+benchmark1 nanos benchable = do
+  Pull1 do
+    firstTime <- Benchable.run benchable 1
+    pure (go (initialEstimate firstTime))
+  where
+    go :: Estimate a -> (Estimate a, Pull1 a)
+    go oldEstimate =
+      ( oldEstimate,
+        Pull1 do
+          let newIters = itersInNanoseconds oldEstimate nanos
+          newTime <- Benchable.run benchable newIters
+          pure (go (updateEstimate newIters newTime oldEstimate))
+      )
+{-# SPECIALIZE benchmark1 :: Rational -> Benchable (Timed RtsStats) -> Pull1 RtsStats #-}
