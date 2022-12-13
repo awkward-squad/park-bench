@@ -1,4 +1,10 @@
-[![Build Status](https://github.com/awkward-squad/park-bench/workflows/Haskell-CI/badge.svg)](https://github.com/awkward-squad/park-bench/actions?query=workflow%3AHaskell-CI) [![Hackage](https://img.shields.io/hackage/v/park-bench.svg?label=park-bench&logo=haskell)](https://hackage.haskell.org/package/park-bench) [![Stackage LTS](https://stackage.org/package/park-bench/badge/lts)](https://www.stackage.org/lts/package/park-bench) [![Stackage Nightly](https://stackage.org/package/park-bench/badge/nightly)](https://www.stackage.org/nightly/package/park-bench) [![Dependencies](https://img.shields.io/hackage-deps/v/park-bench)](https://packdeps.haskellers.com/reverse/park-bench)
+| `park-bench` | `park-bench-internal` |
+| --- | --- |
+| [![GitHub CI](https://github.com/awkward-squad/park-bench/workflows/Haskell-CI/badge.svg)](https://github.com/awkward-squad/park-bench/actions?query=workflow%3AHaskell-CI) | |
+| [![Hackage](https://img.shields.io/hackage/v/park-bench.svg?label=park-bench&logo=haskell)](https://hackage.haskell.org/package/park-bench) | [![Hackage](https://img.shields.io/hackage/v/park-bench-internal.svg?label=park-bench-internal&logo=haskell)](https://hackage.haskell.org/package/park-bench-internal) |
+| [![Stackage LTS](https://stackage.org/package/park-bench/badge/lts)](https://www.stackage.org/lts/package/park-bench) | [![Stackage LTS](https://stackage.org/package/park-bench-internal/badge/lts)](https://www.stackage.org/lts/package/park-bench-internal) |
+| [![Stackage Nightly](https://stackage.org/package/park-bench/badge/nightly)](https://www.stackage.org/nightly/package/park-bench) | [![Stackage Nightly](https://stackage.org/package/park-bench-internal/badge/nightly)](https://www.stackage.org/nightly/package/park-bench-internal) |
+| [![Dependencies](https://img.shields.io/hackage-deps/v/park-bench)](https://packdeps.haskellers.com/reverse/park-bench) | [![Dependencies](https://img.shields.io/hackage-deps/v/park-bench-internal)](https://packdeps.haskellers.com/reverse/park-bench-internal) |
 
 # Overview
 
