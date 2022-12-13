@@ -4,9 +4,10 @@ module ParkBench.Render
   )
 where
 
-import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.List.NonEmpty as NonEmpty
+import Data.Foldable (toList)
 import qualified Data.Text as Text
+import ParkBench.Array1 (Array1)
+import qualified ParkBench.Array1 as Array1
 import ParkBench.Named (Named)
 import qualified ParkBench.Named as Named
 import ParkBench.Prelude
@@ -14,12 +15,12 @@ import ParkBench.Pretty
 import ParkBench.RtsStats
 import ParkBench.Statistics
 
-estimatesToTable :: NonEmpty (Named (Estimate RtsStats)) -> Table
+estimatesToTable :: Array1 (Named (Estimate RtsStats)) -> Table
 estimatesToTable summaries =
-  Table (estimatesToHeader summaries) (estimatesToRowGroups (Named.thing <$> summaries))
+  Table (estimatesToHeader (toList summaries)) (estimatesToRowGroups (Named.thing <$> summaries))
 
-estimatesToHeader :: NonEmpty (Named (Estimate RtsStats)) -> [Cell]
-estimatesToHeader (NonEmpty.toList -> names) =
+estimatesToHeader :: [Named (Estimate RtsStats)] -> [Cell]
+estimatesToHeader names =
   (if length names > 2 then (++ ["Total"]) else id) (go names)
   where
     go :: [Named (Estimate RtsStats)] -> [Cell]
@@ -31,8 +32,8 @@ estimatesToHeader (NonEmpty.toList -> names) =
       ' ' -> '─'
       c -> c
 
-estimatesToRowGroups :: NonEmpty (Estimate RtsStats) -> [RowGroup]
-estimatesToRowGroups (summary0 :| summaries0) =
+estimatesToRowGroups :: Array1 (Estimate RtsStats) -> [RowGroup]
+estimatesToRowGroups summaries =
   [ RowGroup
       "Statistics"
       [ render (R "Samples" (Just . IncomparableWord3Cell . samples)),
@@ -77,4 +78,4 @@ estimatesToRowGroups (summary0 :| summaries0) =
   where
     render :: forall a. Cellular a => R (Estimate RtsStats) a -> Row
     render =
-      rowMaker (summary0 :| summaries0)
+      rowMaker (Array1.toList1 summaries)

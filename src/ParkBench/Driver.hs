@@ -5,14 +5,15 @@ module ParkBench.Driver
     benchmark,
     Pull,
     Pulls,
-    pulls,
+    makePulls,
     pull,
   )
 where
 
+import Data.Foldable (toList)
 import Data.IORef
-import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.List.NonEmpty as NonEmpty
+import ParkBench.Array1 (Array1)
+import qualified ParkBench.Array1 as Array1
 import ParkBench.Benchable (Benchable)
 import qualified ParkBench.Benchable as Benchable
 import ParkBench.Prelude
@@ -89,16 +90,14 @@ pattern Pn p ps <- Pn_ (p : ps)
 {-# COMPLETE P1, P2, P3, Pn #-}
 
 -- | Construct a 'Pulls' from a non-empty list of 'Pull'.
-pulls :: NonEmpty (Pull a) -> Pulls a
-pulls =
-  pulls' . NonEmpty.sortWith \(Pull t _) -> t
-
-pulls' :: NonEmpty (Pull a) -> Pulls a
-pulls' = \case
-  a :| [] -> P1 a
-  a :| [b] -> P2 a b
-  a :| [b, c] -> P3 a b c
-  a :| as -> Pn_ (a : as)
+makePulls :: Array1 (Pull a) -> Pulls a
+makePulls xs
+  | n == 1 = P1 (Array1.get 0 xs)
+  | n == 2 = P2 (Array1.get 0 xs) (Array1.get 1 xs)
+  | n == 3 = P3 (Array1.get 0 xs) (Array1.get 1 xs) (Array1.get 2 xs)
+  | otherwise = Pn_ (toList xs)
+  where
+    n = length xs
 
 -- | Pull on a 'Pulls', which blocks until the benchmark that has heretofore accumulated the smallest amount of runtime
 -- runs once more.

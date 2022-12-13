@@ -135,10 +135,9 @@ doubleDelta v1 v2 =
   (v2 - v1) `divideDouble` v1
 
 rowMaker :: forall a. NonEmpty a -> (forall b. Cellular b => R a b -> Row)
-rowMaker (summary0 :| summaries0) (R name (f :: a -> Maybe b)) =
-  if all isEmptyCell cols
-    then EmptyRow
-    else Row (name : cols)
+rowMaker (summary0 :| summaries0) (R name (f :: a -> Maybe b))
+  | all isEmptyCell cols = EmptyRow
+  | otherwise = Row (name : cols)
   where
     cols :: [Cell]
     cols =

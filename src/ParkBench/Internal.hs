@@ -7,7 +7,7 @@ module ParkBench.Internal
     benchmark,
     Pull,
     Pulls,
-    pulls,
+    makePulls,
     pull,
 
     -- ** Benchable

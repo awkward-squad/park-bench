@@ -7,9 +7,10 @@ module ParkBench
 where
 
 import Control.Concurrent (threadDelay)
-import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.List.NonEmpty as NonEmpty
+import qualified Data.List.NonEmpty as List1
 import qualified Data.Text as Text (pack)
+import ParkBench.Array1 (Array1)
+import qualified ParkBench.Array1 as Array1
 import ParkBench.Benchable (Benchable)
 import qualified ParkBench.Benchable as Benchable
 import qualified ParkBench.Config as Config
@@ -34,10 +35,10 @@ benchmark ::
   [Benchmark] ->
   IO void
 benchmark benchmarks =
-  case NonEmpty.nonEmpty benchmarks of
+  case List1.nonEmpty benchmarks of
     Nothing -> forever (threadDelay maxBound)
-    Just (benchable :| []) -> benchmarkOne (coerce benchable)
-    Just benchables -> benchmarkMany (coerce benchables)
+    Just (benchable List1.:| []) -> benchmarkOne (coerce benchable)
+    Just benchables -> benchmarkMany (Array1.fromList (coerce benchables))
 
 benchmarkOne :: Named (Benchable ()) -> IO void
 benchmarkOne benchable = do
@@ -48,12 +49,12 @@ benchmarkOne benchable = do
           Driver.benchmark1 (Config.runlen config) (Benchable.mapIO Measure.measure (Named.thing benchable))
     loopForever firstPull \pull0 -> do
       (estimate, pull1) <- Driver.pull1 pull0
-      let estimates :: NonEmpty (Named (Estimate RtsStats))
-          estimates = (benchable $> estimate) :| []
+      let estimates :: Array1 (Named (Estimate RtsStats))
+          estimates = Array1.singleton (benchable $> estimate)
       renderToTerminal terminal (renderTable (estimatesToTable estimates))
       pure pull1
 
-benchmarkMany :: NonEmpty (Named (Benchable ())) -> IO void
+benchmarkMany :: Array1 (Named (Benchable ())) -> IO void
 benchmarkMany benchables = do
   config <- Config.getFromEnv
   withTerminal \terminal -> do
@@ -61,7 +62,7 @@ benchmarkMany benchables = do
       (traverse . traverse)
         (\benchable -> Driver.benchmark (Config.runlen config) (Benchable.mapIO Measure.measure benchable))
         benchables
-    loopForever (Driver.pulls (snd . Named.thing <$> summaries0)) \pulls0 -> do
+    loopForever (Driver.makePulls (snd . Named.thing <$> summaries0)) \pulls0 -> do
       summaries <- traverse (traverse fst) summaries0
       renderToTerminal terminal (renderTable (estimatesToTable summaries))
       Driver.pull pulls0
