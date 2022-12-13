@@ -44,15 +44,15 @@ benchmarkOne :: Named (Benchable ()) -> IO void
 benchmarkOne benchable = do
   config <- Config.getFromEnv
   withTerminal \terminal -> do
-    let firstPull :: Driver.Pull1 RtsStats
-        firstPull =
+    let firstLiveBenchmark :: Driver.LiveBenchmark1 RtsStats
+        firstLiveBenchmark =
           Driver.benchmark1 (Config.runlen config) (Benchable.mapIO Measure.measure (Named.thing benchable))
-    loopForever firstPull \pull0 -> do
-      (estimate, pull1) <- Driver.stepPull1 pull0
+    loopForever firstLiveBenchmark \liveBenchmark0 -> do
+      (estimate, liveBenchmark1) <- Driver.stepLiveBenchmark1 liveBenchmark0
       let estimates :: Array1 (Named (Estimate RtsStats))
           estimates = Array1.singleton (benchable $> estimate)
       renderToTerminal terminal (renderTable (estimatesToTable estimates))
-      pure pull1
+      pure liveBenchmark1
 
 benchmarkMany :: Array1 (Named (Benchable ())) -> IO void
 benchmarkMany benchables = do
@@ -62,10 +62,10 @@ benchmarkMany benchables = do
       (traverse . traverse)
         (\benchable -> Driver.benchmark (Config.runlen config) (Benchable.mapIO Measure.measure benchable))
         benchables
-    loopForever (Driver.makePulls (Named.thing <$> summaries0)) \pulls0 -> do
-      summaries <- traverse (traverse Driver.sample) summaries0
+    loopForever (Driver.makeLiveBenchmarks (Named.thing <$> summaries0)) \liveBenchmarks -> do
+      summaries <- traverse (traverse Driver.sampleLiveBenchmark) summaries0
       renderToTerminal terminal (renderTable (estimatesToTable summaries))
-      Driver.pull pulls0
+      Driver.stepLiveBenchmarks liveBenchmarks
 
 loopForever :: forall a void. a -> (a -> IO a) -> IO void
 loopForever x0 once =
