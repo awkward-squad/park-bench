@@ -1,20 +1,11 @@
 module ParkBench.Internal.Driver
-  ( -- * Benchmark config
-    BenchmarkConfig (..),
-
-    -- * Benchmark many
+  ( BenchmarkConfig (..),
     benchmark,
     LiveBenchmark,
     sampleLiveBenchmark,
     LiveBenchmarks,
     makeLiveBenchmarks,
     stepLiveBenchmarks,
-
-    -- * Benchmark one
-    benchmark1,
-    LiveBenchmark1,
-    sampleLiveBenchmark1,
-    stepLiveBenchmark1,
   )
 where
 
@@ -31,9 +22,6 @@ import ParkBench.Internal.Statistics
 data BenchmarkConfig = BenchmarkConfig
   { runlen :: !Rational
   }
-
-------------------------------------------------------------------------------------------------------------------------
--- Benchmark many
 
 data LiveBenchmark a = LiveBenchmark
   { _liveBenchmarkSample :: !(IO (Estimate a)),
@@ -138,39 +126,3 @@ insertPull x0 = \case
     if x0 `isMoreUrgentThan` x1
       then x0 : x1 : xs
       else x1 : insertPull x0 xs
-
-------------------------------------------------------------------------------------------------------------------------
--- Benchmark one
-
-data LiveBenchmark1 a = LiveBenchmark1
-  { _liveBenchmark1Estimate :: Estimate a,
-    _liveBenchmark1Next :: IO (LiveBenchmark1 a)
-  }
-
-sampleLiveBenchmark1 :: LiveBenchmark1 a -> Estimate a
-sampleLiveBenchmark1 =
-  _liveBenchmark1Estimate
-{-# INLINE sampleLiveBenchmark1 #-}
-
-stepLiveBenchmark1 :: LiveBenchmark1 a -> IO (LiveBenchmark1 a)
-stepLiveBenchmark1 =
-  _liveBenchmark1Next
-{-# INLINE stepLiveBenchmark1 #-}
-
--- | Like 'benchmark', but optimized for only running one benchmark.
-benchmark1 :: forall a. Roll a => BenchmarkConfig -> Benchable (Timed a) -> IO (LiveBenchmark1 a)
-benchmark1 BenchmarkConfig {runlen} benchable = do
-  e0 <- initialEstimate <$> Benchable.run benchable 1
-  go e0
-  where
-    go :: Estimate a -> IO (LiveBenchmark1 a)
-    go oldEstimate =
-      pure
-        LiveBenchmark1
-          { _liveBenchmark1Estimate = oldEstimate,
-            _liveBenchmark1Next = do
-              let newIters = itersInNanoseconds oldEstimate runlen
-              newTime <- Benchable.run benchable newIters
-              go (updateEstimate newIters newTime oldEstimate)
-          }
-{-# SPECIALIZE benchmark1 :: BenchmarkConfig -> Benchable (Timed RtsStats) -> IO (LiveBenchmark1 RtsStats) #-}

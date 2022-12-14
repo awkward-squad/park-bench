@@ -149,20 +149,20 @@ rowMaker (Array1.uncons -> (summary0, summaries0)) (R name (f :: a -> Maybe b)) 
   where
     makeCols :: Maybe b -> [a] -> [Cell]
     makeCols s0 = \case
-      [] -> theDeltaCell
+      [] -> totalDelta
       s1 : ss ->
         case (s0, f s1) of
           (Nothing, Just v1) -> EmptyCell : Cell White (Builder.build (cellString v1)) : makeCols (Just v1) ss
           (Just v0, Just v1) -> deltaCell v0 v1 : Cell White (Builder.build (cellString v1)) : makeCols (Just v1) ss
           (_, Nothing) -> EmptyCell : EmptyCell : makeCols Nothing ss
 
-    theDeltaCell :: [Cell]
-    theDeltaCell =
-      if n == 0
+    totalDelta :: [Cell]
+    totalDelta =
+      if n < 2
         then []
         else case (f summary0, f (summaries0 Array.! (n - 1))) of
           (Just v0, Just v1) -> [deltaCell v0 v1]
-          _ -> []
+          _ -> [EmptyCell]
       where
         n = length summaries0
 
@@ -181,18 +181,22 @@ deltaCell v1 v2 =
 
 data Table
   = Table ![Cell] ![RowGroup]
+  deriving stock (Show)
 
 data RowGroup
   = RowGroup {-# UNPACK #-} !Text ![Row]
+  deriving stock (Show)
 
 data Row
   = -- | Invariant: 1+ cells; not all cells are empty
     Row ![Cell]
   | EmptyRow
+  deriving stock (Show)
 
 data Cell
   = EmptyCell
   | Cell !Color {-# UNPACK #-} !Text
+  deriving stock (Show)
 
 cellBuilder :: Cell -> Builder
 cellBuilder = \case
@@ -218,6 +222,7 @@ data Color
   | Green
   | Red
   | White
+  deriving stock (Show)
 
 isEmptyCell :: Cell -> Bool
 isEmptyCell = \case
