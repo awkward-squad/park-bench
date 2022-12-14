@@ -71,16 +71,18 @@ initialEstimate mean =
 
 -- | @updateEstimate n v e@ updates estimate @e@ per thing-that-took-time @v@ that was a run of @n@ iterations.
 updateEstimate :: Roll a => Word64 -> Timed a -> Estimate a -> Estimate a
-updateEstimate n (Timed tn value1) (Estimate kvariance (Timed mean value0) samples) =
-  Estimate kvariance' (Timed mean' value') samples'
+updateEstimate n (Timed tn1 value1) (Estimate kvariance0 (Timed mean0 value0) samples0) =
+  Estimate
+    { kvariance = kvariance0 + nr * (t1 - mean0) * (t1 - mean1),
+      mean = Timed mean1 value',
+      samples = samples1
+    }
   where
-    kvariance' = kvariance + nr * (t1 - mean) * (t1 - mean')
-    mean' = rollmean mean tn
-    samples' = samples + n
-    samplesr' = w2r samples'
-    t1 = tn / nr
+    mean1 = rollmean mean0 tn1
+    samples1 = samples0 + n
+    t1 = tn1 / nr
     value' = roll rollmean value0 value1
-    rollmean u0 u1 = u0 + ((u1 - nr * u0) / samplesr')
+    rollmean u0 u1 = u0 + ((u1 - nr * u0) / w2r samples1)
     nr = w2r n
 
 class Roll a where

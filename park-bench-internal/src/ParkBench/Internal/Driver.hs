@@ -85,7 +85,7 @@ pattern Pn p ps <- Pn_ (p : ps)
 
 {-# COMPLETE P1, P2, P3, Pn #-}
 
--- | Construct a 'Pulls' from a non-empty list of 'Pull'.
+-- | Construct a 'LiveBenchmarks' from a non-empty array of 'LiveBenchmark'.
 makeLiveBenchmarks :: Array1 (LiveBenchmark a) -> LiveBenchmarks a
 makeLiveBenchmarks (fmap _liveBenchmarkPull -> xs)
   | n == 1 = P1 (Array1.get 0 xs)
