@@ -13,6 +13,7 @@ import ParkBench.Internal.Array1 (Array1)
 import qualified ParkBench.Internal.Array1 as Array1
 import ParkBench.Internal.Benchable (Benchable)
 import qualified ParkBench.Internal.Benchable as Benchable
+import ParkBench.Internal.Config (Config (Config))
 import qualified ParkBench.Internal.Config as Config
 import qualified ParkBench.Internal.Driver as Driver
 import qualified ParkBench.Internal.Measure as Measure
@@ -44,8 +45,9 @@ benchmarkOne :: Named (Benchable ()) -> IO void
 benchmarkOne benchable = do
   config <- Config.getFromEnv
   withRenderEstimatesToTerminal \renderEstimatesToTerminal -> do
-    firstLiveBenchmark <-
-      Driver.benchmark1 (Config.runlen config) (Benchable.mapIO Measure.measure (Named.thing benchable))
+    firstLiveBenchmark <- do
+      let measuredBenchable = Benchable.mapIO Measure.measure (Named.thing benchable)
+      Driver.benchmark1 (makeBenchmarkConfig config) measuredBenchable
     loopForever firstLiveBenchmark \liveBenchmark -> do
       let estimates :: Array1 (Named (Estimate RtsStats))
           estimates = Array1.singleton (benchable $> Driver.sampleLiveBenchmark1 liveBenchmark)
@@ -58,12 +60,16 @@ benchmarkMany benchables = do
   withRenderEstimatesToTerminal \renderEstimatesToTerminal -> do
     estimates0 <-
       (traverse . traverse)
-        (\benchable -> Driver.benchmark (Config.runlen config) (Benchable.mapIO Measure.measure benchable))
+        (Driver.benchmark (makeBenchmarkConfig config) . Benchable.mapIO Measure.measure)
         benchables
     loopForever (Driver.makeLiveBenchmarks (Named.thing <$> estimates0)) \liveBenchmarks -> do
       estimates <- traverse (traverse Driver.sampleLiveBenchmark) estimates0
       renderEstimatesToTerminal estimates
       Driver.stepLiveBenchmarks liveBenchmarks
+
+makeBenchmarkConfig :: Config -> Driver.BenchmarkConfig
+makeBenchmarkConfig Config {runlen} =
+  Driver.BenchmarkConfig {runlen}
 
 withRenderEstimatesToTerminal :: ((Array1 (Named (Estimate RtsStats)) -> IO ()) -> IO a) -> IO a
 withRenderEstimatesToTerminal f =

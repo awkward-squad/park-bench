@@ -1,5 +1,8 @@
 module ParkBench.Internal.Driver
-  ( -- * Benchmark many
+  ( -- * Benchmark config
+    BenchmarkConfig (..),
+
+    -- * Benchmark many
     benchmark,
     LiveBenchmark,
     sampleLiveBenchmark,
@@ -25,6 +28,10 @@ import ParkBench.Internal.Prelude
 import ParkBench.Internal.RtsStats (RtsStats)
 import ParkBench.Internal.Statistics
 
+data BenchmarkConfig = BenchmarkConfig
+  { runlen :: !Rational
+  }
+
 ------------------------------------------------------------------------------------------------------------------------
 -- Benchmark many
 
@@ -38,14 +45,14 @@ sampleLiveBenchmark =
   _liveBenchmarkSample
 {-# INLINE sampleLiveBenchmark #-}
 
-benchmark :: forall a. Roll a => Rational -> Benchable (Timed a) -> IO (LiveBenchmark a)
-benchmark nanos benchable = do
+benchmark :: forall a. Roll a => BenchmarkConfig -> Benchable (Timed a) -> IO (LiveBenchmark a)
+benchmark BenchmarkConfig {runlen} benchable = do
   e0 <- initialEstimate <$> Benchable.run benchable 1
   estimateRef <- newIORef e0
   let go :: Estimate a -> Pull a
       go oldEstimate =
         Pull (elapsed oldEstimate) do
-          let newIters = itersInNanoseconds oldEstimate nanos
+          let newIters = itersInNanoseconds oldEstimate runlen
           newTime <- Benchable.run benchable newIters
           let !newEstimate = updateEstimate newIters newTime oldEstimate
           writeIORef estimateRef newEstimate
@@ -55,22 +62,22 @@ benchmark nanos benchable = do
       { _liveBenchmarkSample = readIORef estimateRef,
         _liveBenchmarkPull = go e0
       }
-{-# SPECIALIZE benchmark :: Rational -> Benchable (Timed RtsStats) -> IO (LiveBenchmark RtsStats) #-}
+{-# SPECIALIZE benchmark :: BenchmarkConfig -> Benchable (Timed RtsStats) -> IO (LiveBenchmark RtsStats) #-}
 
 -- Given this latest estimate, how many iters could we run in the given number of nanoseconds?
 itersInNanoseconds :: Estimate a -> Rational -> Word64
 itersInNanoseconds Estimate {mean, samples} nanos =
   max 1 (min samples (floor (nanos / nanoseconds mean)))
 
-data Pull a
-  = Pull
-      -- amount of time this pull has gotten
-      {-# UNPACK #-} !Rational
-      !(IO (Pull a))
+data Pull a = Pull
+  { -- amount of time this pull has gotten
+    pullElapsed :: {-# UNPACK #-} !Rational,
+    pullNext :: !(IO (Pull a))
+  }
 
 isMoreUrgentThan :: Pull a -> Pull a -> Bool
-Pull t0 _ `isMoreUrgentThan` Pull t1 _ =
-  t0 < t1
+isMoreUrgentThan p0 p1 =
+  pullElapsed p0 < pullElapsed p1
 
 -- | A @LiveBenchmarks@ represents the suspended state of a collection of 1+ benchmarks.
 data LiveBenchmarks a
@@ -102,17 +109,17 @@ makeLiveBenchmarks (fmap _liveBenchmarkPull -> xs)
 -- Returns the 'LiveBenchmarks' to use next time, which reflects the latest benchmark run that just completed.
 stepLiveBenchmarks :: LiveBenchmarks a -> IO (LiveBenchmarks a)
 stepLiveBenchmarks = \case
-  P1 (Pull _ action) -> do
-    x0 <- action
+  P1 p0 -> do
+    x0 <- pullNext p0
     pure (P1 x0)
-  P2 (Pull _ action) x1 -> do
-    x0 <- action
+  P2 p0 x1 -> do
+    x0 <- pullNext p0
     pure
       if x1 `isMoreUrgentThan` x0
         then P2 x1 x0
         else P2 x0 x1
-  P3 (Pull _ action) x1 x2 -> do
-    x0 <- action
+  P3 p0 x1 x2 -> do
+    x0 <- pullNext p0
     pure
       if x1 `isMoreUrgentThan` x0
         then
@@ -120,8 +127,8 @@ stepLiveBenchmarks = \case
             then P3 x1 x2 x0
             else P3 x1 x0 x2
         else P3 x0 x1 x2
-  Pn (Pull _ action) xs -> do
-    x0 <- action
+  Pn p0 xs -> do
+    x0 <- pullNext p0
     pure (Pn_ (insertPull x0 xs))
 
 insertPull :: Pull a -> [Pull a] -> [Pull a]
@@ -151,8 +158,8 @@ stepLiveBenchmark1 =
 {-# INLINE stepLiveBenchmark1 #-}
 
 -- | Like 'benchmark', but optimized for only running one benchmark.
-benchmark1 :: forall a. Roll a => Rational -> Benchable (Timed a) -> IO (LiveBenchmark1 a)
-benchmark1 nanos benchable = do
+benchmark1 :: forall a. Roll a => BenchmarkConfig -> Benchable (Timed a) -> IO (LiveBenchmark1 a)
+benchmark1 BenchmarkConfig {runlen} benchable = do
   e0 <- initialEstimate <$> Benchable.run benchable 1
   go e0
   where
@@ -162,8 +169,8 @@ benchmark1 nanos benchable = do
         LiveBenchmark1
           { _liveBenchmark1Estimate = oldEstimate,
             _liveBenchmark1Next = do
-              let newIters = itersInNanoseconds oldEstimate nanos
+              let newIters = itersInNanoseconds oldEstimate runlen
               newTime <- Benchable.run benchable newIters
               go (updateEstimate newIters newTime oldEstimate)
           }
-{-# SPECIALIZE benchmark1 :: Rational -> Benchable (Timed RtsStats) -> IO (LiveBenchmark1 RtsStats) #-}
+{-# SPECIALIZE benchmark1 :: BenchmarkConfig -> Benchable (Timed RtsStats) -> IO (LiveBenchmark1 RtsStats) #-}
