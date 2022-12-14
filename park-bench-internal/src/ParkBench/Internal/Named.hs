@@ -1,4 +1,3 @@
--- | Utility type.
 module ParkBench.Internal.Named
   ( Named (..),
   )

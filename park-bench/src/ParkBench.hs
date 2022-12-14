@@ -90,7 +90,7 @@ function ::
 function name f x =
   Benchmark (Named (Text.pack name) (Benchable.function f x))
 
--- | Benchmark an IO action. The result is evaluated to weak head normal form.
+-- | Benchmark an @IO@ action. The result is evaluated to weak head normal form.
 action ::
   -- | ⠀
   String ->
