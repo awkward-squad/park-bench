@@ -21,7 +21,7 @@ data Array1 a
 
 singleton :: a -> Array1 a
 singleton x =
-  Array1 x (Array.array (0, 0) [])
+  Array1 x (Array.array (1, 0) []) -- bogus bounds is the only way to make an empty array LOL
 
 fromList :: List.NonEmpty a -> Array1 a
 fromList (x List1.:| xs) =
