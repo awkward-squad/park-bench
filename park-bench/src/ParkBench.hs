@@ -43,29 +43,32 @@ benchmark benchmarks =
 benchmarkOne :: Named (Benchable ()) -> IO void
 benchmarkOne benchable = do
   config <- Config.getFromEnv
-  withTerminal \terminal -> do
-    let firstLiveBenchmark :: Driver.LiveBenchmark1 RtsStats
-        firstLiveBenchmark =
-          Driver.benchmark1 (Config.runlen config) (Benchable.mapIO Measure.measure (Named.thing benchable))
-    loopForever firstLiveBenchmark \liveBenchmark0 -> do
-      (estimate, liveBenchmark1) <- Driver.stepLiveBenchmark1 liveBenchmark0
+  withRenderEstimatesToTerminal \renderEstimatesToTerminal -> do
+    firstLiveBenchmark <-
+      Driver.benchmark1 (Config.runlen config) (Benchable.mapIO Measure.measure (Named.thing benchable))
+    loopForever firstLiveBenchmark \liveBenchmark -> do
       let estimates :: Array1 (Named (Estimate RtsStats))
-          estimates = Array1.singleton (benchable $> estimate)
-      renderToTerminal terminal (renderTable (estimatesToTable estimates))
-      pure liveBenchmark1
+          estimates = Array1.singleton (benchable $> Driver.sampleLiveBenchmark1 liveBenchmark)
+      renderEstimatesToTerminal estimates
+      Driver.stepLiveBenchmark1 liveBenchmark
 
 benchmarkMany :: Array1 (Named (Benchable ())) -> IO void
 benchmarkMany benchables = do
   config <- Config.getFromEnv
-  withTerminal \terminal -> do
-    summaries0 <-
+  withRenderEstimatesToTerminal \renderEstimatesToTerminal -> do
+    estimates0 <-
       (traverse . traverse)
         (\benchable -> Driver.benchmark (Config.runlen config) (Benchable.mapIO Measure.measure benchable))
         benchables
-    loopForever (Driver.makeLiveBenchmarks (Named.thing <$> summaries0)) \liveBenchmarks -> do
-      summaries <- traverse (traverse Driver.sampleLiveBenchmark) summaries0
-      renderToTerminal terminal (renderTable (estimatesToTable summaries))
+    loopForever (Driver.makeLiveBenchmarks (Named.thing <$> estimates0)) \liveBenchmarks -> do
+      estimates <- traverse (traverse Driver.sampleLiveBenchmark) estimates0
+      renderEstimatesToTerminal estimates
       Driver.stepLiveBenchmarks liveBenchmarks
+
+withRenderEstimatesToTerminal :: ((Array1 (Named (Estimate RtsStats)) -> IO ()) -> IO a) -> IO a
+withRenderEstimatesToTerminal f =
+  withTerminal \terminal ->
+    f (renderToTerminal terminal . renderTable . estimatesToTable)
 
 loopForever :: forall a void. a -> (a -> IO a) -> IO void
 loopForever x0 once =

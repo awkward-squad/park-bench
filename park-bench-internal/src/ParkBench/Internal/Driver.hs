@@ -10,6 +10,7 @@ module ParkBench.Internal.Driver
     -- * Benchmark one
     benchmark1,
     LiveBenchmark1,
+    sampleLiveBenchmark1,
     stepLiveBenchmark1,
   )
 where
@@ -28,8 +29,8 @@ import ParkBench.Internal.Statistics
 -- Benchmark many
 
 data LiveBenchmark a = LiveBenchmark
-  { _liveBenchmarkSample :: IO (Estimate a),
-    _liveBenchmarkPull :: Pull a
+  { _liveBenchmarkSample :: !(IO (Estimate a)),
+    _liveBenchmarkPull :: !(Pull a)
   }
 
 sampleLiveBenchmark :: LiveBenchmark a -> IO (Estimate a)
@@ -134,27 +135,35 @@ insertPull x0 = \case
 ------------------------------------------------------------------------------------------------------------------------
 -- Benchmark one
 
-newtype LiveBenchmark1 a
-  = LiveBenchmark1 (IO (Estimate a, LiveBenchmark1 a))
+data LiveBenchmark1 a = LiveBenchmark1
+  { _liveBenchmark1Estimate :: Estimate a,
+    _liveBenchmark1Next :: IO (LiveBenchmark1 a)
+  }
 
-stepLiveBenchmark1 :: LiveBenchmark1 a -> IO (Estimate a, LiveBenchmark1 a)
+sampleLiveBenchmark1 :: LiveBenchmark1 a -> Estimate a
+sampleLiveBenchmark1 =
+  _liveBenchmark1Estimate
+{-# INLINE sampleLiveBenchmark1 #-}
+
+stepLiveBenchmark1 :: LiveBenchmark1 a -> IO (LiveBenchmark1 a)
 stepLiveBenchmark1 =
-  coerce
+  _liveBenchmark1Next
 {-# INLINE stepLiveBenchmark1 #-}
 
 -- | Like 'benchmark', but optimized for only running one benchmark.
-benchmark1 :: forall a. Roll a => Rational -> Benchable (Timed a) -> LiveBenchmark1 a
+benchmark1 :: forall a. Roll a => Rational -> Benchable (Timed a) -> IO (LiveBenchmark1 a)
 benchmark1 nanos benchable = do
-  LiveBenchmark1 do
-    firstTime <- Benchable.run benchable 1
-    pure (go (initialEstimate firstTime))
+  e0 <- initialEstimate <$> Benchable.run benchable 1
+  go e0
   where
-    go :: Estimate a -> (Estimate a, LiveBenchmark1 a)
+    go :: Estimate a -> IO (LiveBenchmark1 a)
     go oldEstimate =
-      ( oldEstimate,
-        LiveBenchmark1 do
-          let newIters = itersInNanoseconds oldEstimate nanos
-          newTime <- Benchable.run benchable newIters
-          pure (go (updateEstimate newIters newTime oldEstimate))
-      )
-{-# SPECIALIZE benchmark1 :: Rational -> Benchable (Timed RtsStats) -> LiveBenchmark1 RtsStats #-}
+      pure
+        LiveBenchmark1
+          { _liveBenchmark1Estimate = oldEstimate,
+            _liveBenchmark1Next = do
+              let newIters = itersInNanoseconds oldEstimate nanos
+              newTime <- Benchable.run benchable newIters
+              go (updateEstimate newIters newTime oldEstimate)
+          }
+{-# SPECIALIZE benchmark1 :: Rational -> Benchable (Timed RtsStats) -> IO (LiveBenchmark1 RtsStats) #-}
