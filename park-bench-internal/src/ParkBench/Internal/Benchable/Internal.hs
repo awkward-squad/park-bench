@@ -1,8 +1,8 @@
 {-# OPTIONS_GHC -O2 -fno-full-laziness -fno-prof-auto #-}
 
 module ParkBench.Internal.Benchable.Internal
-  ( whnf,
-    whnfIO,
+  ( function,
+    action,
   )
 where
 
@@ -10,8 +10,8 @@ import Control.Exception (evaluate)
 import Data.Word (Word64)
 import Prelude
 
-whnf :: (a -> b) -> a -> Word64 -> IO ()
-whnf f x =
+function :: (a -> b) -> a -> Word64 -> IO ()
+function f x =
   go
   where
     go :: Word64 -> IO ()
@@ -23,11 +23,11 @@ whnf f x =
         --   https://gitlab.haskell.org/ghc/ghc/-/issues/21948
         _ <- evaluate (f x)
         go (n - 1)
--- prevent `whnf f x` from inlining to prevent `f x` from getting let-floated
-{-# NOINLINE whnf #-}
+-- prevent `function f x` from inlining to prevent `f x` from getting let-floated
+{-# NOINLINE function #-}
 
-whnfIO :: IO a -> Word64 -> IO ()
-whnfIO io =
+action :: IO a -> Word64 -> IO ()
+action io =
   go
   where
     go :: Word64 -> IO ()
@@ -36,4 +36,4 @@ whnfIO io =
       n -> do
         result <- io
         result `seq` go (n - 1)
-{-# NOINLINE whnfIO #-}
+{-# NOINLINE action #-}

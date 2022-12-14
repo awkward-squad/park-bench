@@ -38,7 +38,7 @@ benchmark benchmarks =
   case List1.nonEmpty benchmarks of
     Nothing -> forever (threadDelay maxBound)
     Just (benchable List1.:| []) -> benchmarkOne (coerce benchable)
-    Just benchables -> benchmarkMany (Array1.fromList (coerce benchables))
+    Just benchables -> benchmarkMany (Array1.fromList1 (coerce benchables))
 
 benchmarkOne :: Named (Benchable ()) -> IO void
 benchmarkOne benchable = do
@@ -88,7 +88,7 @@ function ::
   a ->
   Benchmark
 function name f x =
-  Benchmark (Named (Text.pack name) (Benchable.whnf f x))
+  Benchmark (Named (Text.pack name) (Benchable.function f x))
 
 -- | Benchmark an IO action. The result is evaluated to weak head normal form.
 action ::
@@ -98,4 +98,4 @@ action ::
   IO a ->
   Benchmark
 action name x =
-  Benchmark (Named (Text.pack name) (Benchable.whnfIO x))
+  Benchmark (Named (Text.pack name) (Benchable.action x))

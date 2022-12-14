@@ -65,7 +65,6 @@ library
   exposed-modules:
     ParkBench.Internal.Array1
     ParkBench.Internal.Benchable
-    ParkBench.Internal.Benchable.Internal
     ParkBench.Internal.Builder
     ParkBench.Internal.Config
     ParkBench.Internal.Driver
@@ -93,3 +92,5 @@ library
     ghc-options:
       -Wno-missing-kind-signatures
   hs-source-dirs: src
+  other-modules:
+    ParkBench.Internal.Benchable.Internal

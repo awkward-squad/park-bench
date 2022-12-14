@@ -2,33 +2,37 @@ module ParkBench.Internal.Benchable
   ( Benchable,
     run,
     mapIO,
-    whnf,
-    whnfIO,
+    function,
+    action,
   )
 where
 
 import qualified ParkBench.Internal.Benchable.Internal as Internal
 import ParkBench.Internal.Prelude
 
+-- | A benchmarkable thing, constructed with either 'function' or 'action'.
 newtype Benchable a
   = Benchable (Word64 -> IO a)
 
+-- | Run a benchmarkable thing for a number of iterations.
 run :: Benchable a -> Word64 -> IO a
 run =
   coerce
 {-# INLINE run #-}
 
+-- | Map over a benchmarkable thing in @IO@.
 mapIO :: (IO a -> IO b) -> Benchable a -> Benchable b
-mapIO f (Benchable g) =
-  Benchable (f . g)
+mapIO =
+  \f (Benchable g) ->
+    Benchable (f . g)
 {-# INLINE mapIO #-}
 
-whnf :: forall a b. (a -> b) -> a -> Benchable ()
-whnf =
-  coerce @((a -> b) -> a -> Word64 -> IO ()) Internal.whnf
-{-# INLINE whnf #-}
+function :: (a -> b) -> a -> Benchable ()
+function =
+  \f x -> Benchable (Internal.function f x)
+{-# INLINE function #-}
 
-whnfIO :: forall a. IO a -> Benchable ()
-whnfIO =
-  coerce @(IO a -> Word64 -> IO ()) Internal.whnfIO
-{-# INLINE whnfIO #-}
+action :: IO a -> Benchable ()
+action =
+  \x -> Benchable (Internal.action x)
+{-# INLINE action #-}
