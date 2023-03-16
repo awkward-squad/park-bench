@@ -11,7 +11,7 @@ maintainer: Mitchell Rosen <mitchellwrosen@gmail.com>, Travis Staton <hello@trav
 name: park-bench-internal
 stability: experimental
 synopsis: @park-bench@ internals
-tested-with: GHC == 9.0.2, GHC == 9.2.4, GHC == 9.4.1
+tested-with: GHC == 9.2.7, GHC == 9.4.4, GHC == 9.6.1
 version: 0.1.0
 
 description:
