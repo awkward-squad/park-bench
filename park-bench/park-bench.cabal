@@ -30,7 +30,7 @@ source-repository head
 
 library
   build-depends:
-    base ^>= 4.12 || ^>= 4.13 || ^>= 4.14 || ^>= 4.15 || ^>= 4.16 || ^>= 4.17,
+    base ^>= 4.12 || ^>= 4.13 || ^>= 4.14 || ^>= 4.15 || ^>= 4.16 || ^>= 4.17 || ^>= 4.18,
     park-bench-internal ^>= 0.1,
     text ^>= 1.1 || ^>= 1.2 || ^>= 2.0,
   default-extensions:
