@@ -257,13 +257,16 @@ renderTable (Table labels rowGroups) =
         s -> Just ((line : s) `Builder.sepBy` Builder.char '\n')
       where
         line =
-          Builder.char '├'
-            <> "\ESC[1m\ESC[97m"
-            <> Builder.text (Text.map dash label)
-            <> "\ESC[39m\ESC[22m"
-            <> Builder.chars (head widths + 2 - Text.length label) '─'
-            <> foldMap (\n -> Builder.char '┼' <> Builder.chars (n + 2) '─') (tail widths)
-            <> Builder.char '┤'
+          case widths of
+            w0 : ws ->
+              Builder.char '├'
+                <> "\ESC[1m\ESC[97m"
+                <> Builder.text (Text.map dash label)
+                <> "\ESC[39m\ESC[22m"
+                <> Builder.chars (w0 + 2 - Text.length label) '─'
+                <> foldMap (\n -> Builder.char '┼' <> Builder.chars (n + 2) '─') ws
+                <> Builder.char '┤'
+            _ -> undefined
 
         dash :: Char -> Char
         dash = \case

@@ -10,8 +10,7 @@ module ParkBench.Internal.Prelude
   )
 where
 
-import Control.Applicative as X
-import Control.Monad as X
+import Control.Monad as X (forever)
 import Data.Coerce as X (coerce)
 import Data.Foldable as X (fold, foldl')
 import Data.Functor as X (($>))
@@ -21,7 +20,55 @@ import Data.Typeable as X (Typeable)
 import Data.Word as X (Word64, Word8)
 import GHC.Generics as X (Generic)
 import Numeric.Natural as X (Natural)
-import Prelude as X hiding (read)
+import Prelude as X
+  ( Applicative (..),
+    Bool (..),
+    Char,
+    Double,
+    Eq (..),
+    FilePath,
+    Foldable,
+    Functor (..),
+    IO,
+    Int,
+    Maybe (..),
+    Monad (..),
+    Monoid (..),
+    Num (..),
+    Ord (..),
+    Ordering (..),
+    Rational,
+    Semigroup (..),
+    Show (..),
+    String,
+    Traversable,
+    all,
+    error,
+    floor,
+    foldMap,
+    fromIntegral,
+    fromRational,
+    length,
+    map,
+    max,
+    maxBound,
+    otherwise,
+    realToFrac,
+    replicate,
+    sqrt,
+    subtract,
+    toRational,
+    traverse,
+    undefined,
+    zip,
+    zipWith,
+    ($!),
+    (++),
+    (.),
+    (/),
+    (<$>),
+    (||),
+  )
 
 divide :: Rational -> Rational -> Rational
 divide n d =

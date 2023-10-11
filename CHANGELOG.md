@@ -1,7 +1,6 @@
-## [0.1.1.0] - Unreleased
+## [0.1.1.0] - 23-10-10
 
 - Accept `PARK_BENCH_RUNLEN` env var
-- Move `ParkBench.Internal` into its own package `park-bench-internal`
 
 ## [0.1.0.1] - 22-08-06
 
